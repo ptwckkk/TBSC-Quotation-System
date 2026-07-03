@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TBSC — FRP Boat Quotation System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy-950:#0a1e33;
+  --navy-900:#0d2740;
+  --navy-800:#13315c;
+  --navy-700:#1c4470;
+  --steel-400:#7891a8;
+  --steel-200:#c7d3dd;
+  --paper:#f7f4ec;
+  --paper-line:#e3ddca;
+  --teal:#0f8b8d;
+  --teal-dark:#0a6567;
+  --amber:#d99a2b;
+  --amber-dark:#b87e1a;
+  --ink:#132433;
+  --ink-soft:#4a5c6b;
+  --danger:#b3452f;
+  --good:#2f7d4f;
+  --radius:3px;
+  --shadow:0 1px 2px rgba(10,30,51,.08), 0 4px 14px rgba(10,30,51,.06);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Inter',sans-serif;
+  color:var(--ink);
+  background:var(--paper);
+  font-size:14px;
+  line-height:1.5;
+}
+h1,h2,h3,h4{font-family:'Big Shoulders Display',sans-serif;font-weight:700;letter-spacing:.02em;margin:0;text-transform:uppercase;}
+.mono{font-family:'IBM Plex Mono',monospace;}
+button{font-family:inherit;cursor:pointer;}
+input,select,textarea{font-family:inherit;font-size:13px;}
+a{color:inherit;}
+
+/* ---------- Shell ---------- */
+#app{display:flex;min-height:100vh;}
+.sidebar{
+  width:220px;flex:none;background:var(--navy-950);color:var(--steel-200);
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.025) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 1px, transparent 1px 24px);
+}
+.brand{padding:22px 18px 16px;border-bottom:1px solid rgba(255,255,255,.08);}
+.brand .mark{display:flex;align-items:center;gap:9px;}
+.brand .mark svg{flex:none;}
+.brand h1{font-size:22px;color:#fff;line-height:1;}
+.brand .sub{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--steel-400);margin-top:4px;}
+.nav{flex:1;padding:14px 10px;overflow-y:auto;}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius);
+  color:var(--steel-200);font-size:12.5px;letter-spacing:.03em;text-transform:uppercase;font-weight:600;
+  cursor:pointer;margin-bottom:2px;border:1px solid transparent;
+}
+.nav-item .num{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--steel-400);width:16px;}
+.nav-item:hover{background:rgba(255,255,255,.05);}
+.nav-item.active{background:var(--navy-800);color:#fff;border-color:rgba(255,255,255,.08);}
+.nav-item.active .num{color:var(--amber);}
+.sidebar-foot{padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);font-size:10px;color:var(--steel-400);}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column;}
+.topbar{
+  height:56px;flex:none;background:#fff;border-bottom:1px solid var(--paper-line);
+  display:flex;align-items:center;justify-content:space-between;padding:0 22px;position:sticky;top:0;z-index:20;
+}
+.topbar .title{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;}
+.topbar .actions{display:flex;gap:8px;}
+.content{padding:24px;flex:1;}
+
+/* ---------- Buttons ---------- */
+.btn{
+  border:1px solid var(--navy-800);background:#fff;color:var(--navy-800);
+  padding:8px 14px;border-radius:var(--radius);font-size:12px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.04em;display:inline-flex;align-items:center;gap:6px;
+}
+.btn:hover{background:var(--navy-900);color:#fff;}
+.btn-primary{background:var(--teal);border-color:var(--teal);color:#fff;}
+.btn-primary:hover{background:var(--teal-dark);border-color:var(--teal-dark);}
+.btn-amber{background:var(--amber);border-color:var(--amber-dark);color:#fff;}
+.btn-amber:hover{background:var(--amber-dark);}
+.btn-ghost{border-color:transparent;background:transparent;color:var(--ink-soft);}
+.btn-ghost:hover{background:var(--paper-line);color:var(--ink);}
+.btn-danger{border-color:var(--danger);color:var(--danger);background:#fff;}
+.btn-danger:hover{background:var(--danger);color:#fff;}
+.btn-sm{padding:5px 10px;font-size:10.5px;}
+.btn[disabled]{opacity:.4;cursor:not-allowed;}
+
+/* ---------- Cards / layout ---------- */
+.card{background:#fff;border:1px solid var(--paper-line);border-radius:var(--radius);box-shadow:var(--shadow);}
+.card-head{padding:14px 18px;border-bottom:1px solid var(--paper-line);display:flex;align-items:center;justify-content:space-between;}
+.card-head h3{font-size:15px;color:var(--navy-900);}
+.card-body{padding:18px;}
+.grid{display:grid;gap:16px;}
+.g2{grid-template-columns:1fr 1fr;}
+.g3{grid-template-columns:1fr 1fr 1fr;}
+.g4{grid-template-columns:1fr 1fr 1fr 1fr;}
+@media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr;}}
+
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);font-weight:600;margin-bottom:5px;}
+.field input,.field select,.field textarea{
+  width:100%;padding:8px 10px;border:1px solid #d7d0bc;border-radius:var(--radius);background:#fffef9;color:var(--ink);
+}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--teal);outline-offset:0;border-color:var(--teal);}
+.field .hint{font-size:10.5px;color:var(--steel-400);margin-top:3px;}
+.field-inline{display:flex;align-items:center;gap:8px;}
+
+/* ---------- Dashboard ---------- */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+@media(max-width:900px){.stat-row{grid-template-columns:repeat(2,1fr);}}
+.stat{background:var(--navy-950);color:#fff;border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden;}
+.stat::after{content:'';position:absolute;right:-10px;bottom:-10px;width:70px;height:70px;border:1px solid rgba(255,255,255,.08);border-radius:50%;}
+.stat .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--steel-400);margin-bottom:6px;}
+.stat .val{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;}
+.stat.amber{background:var(--amber-dark);}
+.stat.teal{background:var(--teal-dark);}
+
+/* ---------- Tables ---------- */
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);padding:8px 10px;border-bottom:2px solid var(--navy-800);}
+td{padding:8px 10px;border-bottom:1px solid var(--paper-line);vertical-align:middle;}
+tr:hover td{background:#fbfaf5;}
+.tbl-input{width:100%;border:1px solid transparent;background:transparent;padding:4px 6px;border-radius:2px;}
+.tbl-input:hover,.tbl-input:focus{border-color:#d7d0bc;background:#fffef9;}
+.tbl-input.num{text-align:right;font-family:'IBM Plex Mono',monospace;}
+.right{text-align:right;}
+.center{text-align:center;}
+
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+.badge.draft{background:#eee6c8;color:#8a6d10;}
+.badge.sent{background:#d6e6f5;color:#1c5583;}
+.badge.approved{background:#d8ecdd;color:#1f6e39;}
+
+/* ---------- Tabs (editor) ---------- */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--paper-line);margin-bottom:18px;flex-wrap:wrap;background:#fff;border-radius:var(--radius) var(--radius) 0 0;padding:4px;box-shadow:var(--shadow);}
+.tab{padding:9px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:600;color:var(--ink-soft);border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;gap:6px;}
+.tab .n{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--steel-400);}
+.tab:hover{background:var(--paper);}
+.tab.active{background:var(--navy-900);color:#fff;}
+.tab.active .n{color:var(--amber);}
+.tabpane{display:none;}
+.tabpane.active{display:block;animation:fade .15s ease;}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+
+/* ---------- Editor layout: form + live summary ---------- */
+.editor-grid{display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start;}
+@media(max-width:1100px){.editor-grid{grid-template-columns:1fr;}}
+.summary-panel{position:sticky;top:72px;}
+.sum-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--paper-line);font-size:12px;}
+.sum-row .k{color:var(--ink-soft);}
+.sum-row .v{font-family:'IBM Plex Mono',monospace;font-weight:600;}
+.sum-total{display:flex;justify-content:space-between;padding:14px 0 4px;margin-top:6px;border-top:2px solid var(--navy-800);}
+.sum-total .k{font-family:'Big Shoulders Display',sans-serif;font-size:15px;text-transform:uppercase;}
+.sum-total .v{font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:700;color:var(--teal-dark);}
+
+/* Spec plate signature element */
+.spec-plate{
+  background:var(--navy-950);color:var(--steel-200);border-radius:var(--radius);padding:16px 18px;margin-bottom:18px;
+  background-image: linear-gradient(135deg, rgba(15,139,141,.15), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.03) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.03) 0 1px, transparent 1px 22px);
+  border:1px solid rgba(255,255,255,.08);
+}
+.spec-plate .row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px 22px;}
+.spec-plate .cell{min-width:80px;}
+.spec-plate .cell .l{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--steel-400);}
+.spec-plate .cell .v{font-family:'IBM Plex Mono',monospace;font-size:15px;color:#fff;}
+
+/* Accessories item rows */
+.acc-cat{margin-bottom:16px;}
+.acc-cat-head{display:flex;justify-content:space-between;align-items:center;padding:8px 4px;border-bottom:1px solid var(--navy-800);margin-bottom:4px;}
+.acc-cat-head h4{font-size:12.5px;color:var(--navy-900);}
+
+/* ---------- Quotation document / print ---------- */
+.doc-wrap{background:#e9e5d8;padding:30px;border-radius:var(--radius);}
+.doc{background:#fff;max-width:800px;margin:0 auto;padding:48px 52px;box-shadow:0 2px 20px rgba(0,0,0,.15);color:#1a1a1a;font-size:12.5px;}
+.doc h1,.doc h2,.doc h3{font-family:'Big Shoulders Display',sans-serif;}
+.doc-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid var(--navy-900);padding-bottom:14px;margin-bottom:18px;}
+.doc-header .co h2{font-size:24px;color:var(--navy-900);}
+.doc-header .co .tag{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);}
+.doc-header .meta{text-align:right;font-size:11px;}
+.doc-header .meta .ref{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--navy-900);}
+.doc-section-title{font-size:13px;background:var(--navy-900);color:#fff;padding:5px 10px;margin:20px 0 8px;letter-spacing:.05em;}
+.doc table{font-size:11.5px;}
+.doc th{border-bottom:1px solid #999;background:#f2f0e8;}
+.doc td{border-bottom:1px solid #ddd;}
+.doc .grand{font-weight:700;font-size:14px;background:#fbf3df;}
+.doc-terms{font-size:10.5px;color:#333;}
+.doc-terms ol{padding-left:16px;}
+.doc-sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:34px;font-size:11px;text-align:center;}
+.doc-sign .ln{border-top:1px solid #333;margin-top:36px;padding-top:6px;}
+@media print{
+  body *{visibility:hidden;}
+  .doc-wrap,.doc-wrap *{visibility:visible;}
+  .doc-wrap{position:absolute;left:0;top:0;padding:0;background:#fff;width:100%;}
+  .doc{box-shadow:none;margin:0;max-width:100%;}
+  .no-print{display:none!important;}
+}
+
+/* empty state */
+.empty{padding:40px 20px;text-align:center;color:var(--ink-soft);}
+.empty svg{opacity:.35;margin-bottom:10px;}
+
+/* toast */
+#toast{position:fixed;bottom:20px;right:20px;background:var(--navy-950);color:#fff;padding:11px 18px;border-radius:var(--radius);font-size:12.5px;box-shadow:var(--shadow);z-index:999;opacity:0;transform:translateY(6px);transition:all .2s;pointer-events:none;}
+#toast.show{opacity:1;transform:translateY(0);}
+
+.section-lead{font-size:11.5px;color:var(--ink-soft);margin-bottom:14px;max-width:560px;}
+.pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.search{position:relative;}
+.search input{padding-left:30px;}
+.search svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);opacity:.4;}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">
+        <svg width="26" height="26" viewBox="0 0 26 26"><path d="M3 17c2 3 5 3 7 1 2 2 5 2 7 0 2 2 5 2 7-1" stroke="#0f8b8d" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M6 14l2-9h9l2 9" stroke="#c7d3dd" stroke-width="1.6" fill="none" stroke-linejoin="round"/><line x1="13" y1="5" x2="13" y2="2" stroke="#d99a2b" stroke-width="1.6"/></svg>
+        <h1>TBSC</h1>
+      </div>
+      <div class="sub">FRP Quotation System</div>
+    </div>
+    <nav class="nav" id="navList"></nav>
+    <div class="sidebar-foot">v1.0 · Local storage build</div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="title" id="topbarTitle">Dashboard</div>
+      <div class="actions" id="topbarActions"></div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   STATE & PERSISTENCE
+   ============================================================ */
+const DB_KEYS = { quotes:'frp_quotations', customers:'frp_customers', pricing:'frp_pricing_db', templates:'frp_boat_templates' };
+
+function load(key, fallback){ try{ const v = localStorage.getItem(key); return v? JSON.parse(v) : fallback; }catch(e){ return fallback; } }
+function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+function uid(prefix){ return prefix+'_'+Math.random().toString(36).slice(2,9); }
+function fmt(n){ n = Number(n)||0; return '₱'+n.toLocaleString('en-PH',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtNum(n,d=2){ n=Number(n)||0; return n.toLocaleString('en-PH',{minimumFractionDigits:d,maximumFractionDigits:d}); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(window._tt); window._tt=setTimeout(()=>t.classList.remove('show'),2200); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+
+/* ---------- default pricing database ---------- */
+const DEFAULT_PRICING = {
+  fiberglassPerKg: 210,
+  resinPerLiter: 175,
+  resinDensity: 1.1,
+  resinRatio: 1.8,
+  gelcoatPerKg: 260,
+  gelcoatCoverage: 0.6,
+  corePerSqm: 850,
+  primerPerLiter: 320,
+  primerCoverage: 6,
+  paintPerLiter: 480,
+  paintCoverage: 8,
+  laborRates: { fabrication:180, fiberglass:190, painting:160, electrical:200, assembly:170, testing:210 },
+  overheadPct: 12,
+  contingencyPct: 5,
+  marginPct: 18,
+  dailyRate: 3500,
+  standardDurationDays: 180,
+  rushFeePct: 15,
+  engineDb: [
+    {id:uid('eng'), name:'Isuzu 340HP UM6SD1TCX + Dong-I DMT140H', hp:340, price:3048856},
+    {id:uid('eng'), name:'Yanmar 6LY440 (440HP)', hp:440, price:3650000},
+    {id:uid('eng'), name:'Cummins QSB6.7 (450HP)', hp:450, price:3820000},
+  ],
+  accessoryCatalog: [
+    {cat:'Hull & Deck Accessories', name:'Stainless Bollard (pair)', unitPrice:8500},
+    {cat:'Hull & Deck Accessories', name:'Stainless Cleat', unitPrice:1800},
+    {cat:'Hull & Deck Accessories', name:'Towing Bitt', unitPrice:6200},
+    {cat:'Hull & Deck Accessories', name:'Rub Rail (per ft)', unitPrice:420},
+    {cat:'Hull & Deck Accessories', name:'SS#316 Grab Handle', unitPrice:2600},
+    {cat:'Electrical System', name:'12V Panel Switch Board', unitPrice:14500},
+    {cat:'Electrical System', name:'Dome Light', unitPrice:950},
+    {cat:'Electrical System', name:'Bilge Pump w/ Auto Float', unitPrice:4200},
+    {cat:'Electrical System', name:'Battery (Marine Deep Cycle)', unitPrice:9800},
+    {cat:'Navigational Equipment', name:'GPS Chartplotter 10in', unitPrice:95000},
+    {cat:'Navigational Equipment', name:'Marine Radar 36NM', unitPrice:185000},
+    {cat:'Anchor & Docking', name:'Anchor Set w/ Chain & Rope', unitPrice:22000},
+    {cat:'Anchor & Docking', name:'Fender', unitPrice:1600},
+    {cat:'SOLAS Safety Equipment', name:'Life Vest', unitPrice:850},
+    {cat:'SOLAS Safety Equipment', name:'Ring Buoy', unitPrice:2400},
+    {cat:'SOLAS Safety Equipment', name:'Fire Extinguisher', unitPrice:1850},
+  ],
+  structuralCatalog: [
+    {cat:'Stiffeners & Framing', name:'Longitudinal Stiffener (glassed-in)', unit:'linear m', unitPrice:1450},
+    {cat:'Stiffeners & Framing', name:'Transverse Frame / Stringer', unit:'linear m', unitPrice:1650},
+    {cat:'Stiffeners & Framing', name:'Hat-Section Stringer (foam-cored)', unit:'linear m', unitPrice:1950},
+    {cat:'Bulkheads', name:'Plywood Bulkhead (marine ply, glassed both sides)', unit:'sqm', unitPrice:3800},
+    {cat:'Bulkheads', name:'FRP Sandwich Bulkhead (foam core)', unit:'sqm', unitPrice:4600},
+    {cat:'Bulkheads', name:'Collision / Watertight Bulkhead', unit:'sqm', unitPrice:5200},
+    {cat:'Foam & Core Materials', name:'Urethane Pour Foam (flotation/buoyancy)', unit:'cu.ft', unitPrice:850},
+    {cat:'Foam & Core Materials', name:'PVC Foam Core Board (Divinycell-type)', unit:'sqm', unitPrice:2600},
+    {cat:'Foam & Core Materials', name:'End-Grain Balsa Core', unit:'sqm', unitPrice:2200},
+    {cat:'Foam & Core Materials', name:'Marine Plywood Coring (per sheet, 4x8ft)', unit:'sheet', unitPrice:3200},
+    {cat:'Other Structural Materials', name:'Chopped Strand Mat (450gsm, per roll)', unit:'roll', unitPrice:4800},
+    {cat:'Other Structural Materials', name:'Woven Roving Reinforcement (per roll)', unit:'roll', unitPrice:6200},
+    {cat:'Other Structural Materials', name:'Structural Adhesive / Epoxy Filler', unit:'kg', unitPrice:650},
+    {cat:'Other Structural Materials', name:'Deck Beam / Carlin (FRP)', unit:'linear m', unitPrice:1800},
+  ]
+};
+
+const DEFAULT_TEMPLATES = [
+  { id:uid('tpl'), name:"64' Passenger Boat — 80 Pax (Inboard)", boatType:'Passenger Boat', loa:64, beam:14, depth:6, numHulls:1,
+    hullAreaOverride:null, layers:3, glassPerLayer:0.6,
+    paintArea:null, coats:3,
+    accessories: [
+      {cat:'Hull & Deck Accessories', name:'Stainless Bollard', qty:2, unitPrice:8500, markup:15},
+      {cat:'Hull & Deck Accessories', name:'Stainless Cleat', qty:6, unitPrice:1800, markup:15},
+      {cat:'Hull & Deck Accessories', name:'Towing Bitt', qty:2, unitPrice:6200, markup:15},
+      {cat:'Electrical System', name:'Dome Light', qty:16, unitPrice:950, markup:15},
+      {cat:'Electrical System', name:'Bilge Pump w/ Auto Float', qty:1, unitPrice:4200, markup:15},
+      {cat:'Navigational Equipment', name:'GPS Chartplotter 10in', qty:1, unitPrice:95000, markup:10},
+      {cat:'Navigational Equipment', name:'Marine Radar 36NM', qty:1, unitPrice:185000, markup:10},
+      {cat:'Anchor & Docking', name:'Anchor Set w/ Chain & Rope', qty:1, unitPrice:22000, markup:15},
+      {cat:'SOLAS Safety Equipment', name:'Life Vest', qty:84, unitPrice:850, markup:15},
+      {cat:'SOLAS Safety Equipment', name:'Fire Extinguisher', qty:4, unitPrice:1850, markup:15},
+    ],
+    engine: { model:'Isuzu 340HP UM6SD1TCX + Dong-I DMT140H', hp:340, qty:2, unitPrice:3048856, installation:180000 },
+    labor: { fabrication:900, fiberglass:600, painting:260, electrical:320, assembly:400, testing:120 }
+  }
+];
+
+let PRICING = load(DB_KEYS.pricing, null) || JSON.parse(JSON.stringify(DEFAULT_PRICING));
+if(!PRICING.structuralCatalog) PRICING.structuralCatalog = JSON.parse(JSON.stringify(DEFAULT_PRICING.structuralCatalog));
+if(PRICING.dailyRate===undefined) PRICING.dailyRate = DEFAULT_PRICING.dailyRate;
+if(PRICING.standardDurationDays===undefined) PRICING.standardDurationDays = DEFAULT_PRICING.standardDurationDays;
+if(PRICING.rushFeePct===undefined) PRICING.rushFeePct = DEFAULT_PRICING.rushFeePct;
+let CUSTOMERS = load(DB_KEYS.customers, []);
+let QUOTES = load(DB_KEYS.quotes, []);
+let TEMPLATES = load(DB_KEYS.templates, null) || DEFAULT_TEMPLATES;
+if(!load(DB_KEYS.templates,null)) save(DB_KEYS.templates, TEMPLATES);
+if(!load(DB_KEYS.pricing,null)) save(DB_KEYS.pricing, PRICING);
+
+const COMPANY = { name:'The Boat Shop Corporation', tagline:'Fiberglass Boat Builders', email:'info@boatshopphilippines.com', address:'Philippines' };
+
+/* ============================================================
+   NEW QUOTATION FACTORY
+   ============================================================ */
+function blankQuote(){
+  return {
+    id: uid('q'),
+    refNo: nextRefNo(),
+    status: 'draft',
+    date: todayISO(),
+    validityDays: 30,
+    customerId: null,
+    customerSnap: { name:'', email:'', address:'', contact:'' },
+    project: { title:'', notes:'' },
+    hull: { boatType:'Passenger Boat', loa:0, beam:0, depth:0, numHulls:1, hullAreaOverride:null, layers:3, glassPerLayer:0.6, coreArea:0, coreEnabled:false },
+    structural: { items:[] },
+    paint: { areaOverride:null, coats:3, paintType:'Marine Polyurethane Topcoat' },
+    accessories: [],
+    engine: { model:'', hp:0, qty:2, unitPrice:0, installation:0, transmission:'', propeller:'' },
+    labor: { fabrication:0, fiberglass:0, painting:0, electrical:0, assembly:0, testing:0 },
+    rates: JSON.parse(JSON.stringify(PRICING)), // snapshot, editable per-quote
+    schedule: { startDate: todayISO(), standardDays: PRICING.standardDurationDays, requestedDays: PRICING.standardDurationDays },
+    terms: [
+      {title:'Completion Time', body:'12 months from date of receipt of downpayment and Purchase Order'},
+      {title:'Payment Terms', body:'20% downpayment upon confirmation of order; progress billing per agreed schedule; 10% upon completion and sea trial before delivery'},
+      {title:'Hull Warranty', body:'Two (2) years on hull structure for pleasure use, one (1) year for commercial use, covering manufacturing defects under normal use conditions.'},
+      {title:'Warranty Exclusions', body:'Warranty excludes normal wear and tear, misuse or negligence, unauthorized modification, force majeure, and third-party accessories which follow manufacturer warranty.'},
+      {title:'Delivery', body:'Delivery outside factory premises subject to separate agreement and additional logistics charges.'},
+      {title:'Regulatory Compliance', body:'Boat registration, MARINA licenses, permits and certificates shall be borne by the customer.'},
+    ],
+    marina: {
+      items: [
+        {name:"MARINA Construction Permit (Certificate of Construction)", responsibility:'Company', remarks:'Filed prior to keel-laying'},
+        {name:"Certificate of Vessel Registry (COR)", responsibility:'Customer', remarks:''},
+        {name:"Coastwise License / Certificate of Public Convenience", responsibility:'Customer', remarks:'If for commercial operation'},
+        {name:"Load Line Certificate", responsibility:'Customer', remarks:''},
+        {name:"Cargo Ship Safety Equipment Certificate", responsibility:'Customer', remarks:''},
+        {name:"Certificate of Inspection (COI)", responsibility:'Customer', remarks:'Annual renewal'},
+        {name:"Tonnage Certificate", responsibility:'Customer', remarks:''},
+        {name:"Builder's Certificate", responsibility:'Company', remarks:'Issued upon delivery'},
+      ],
+      notes:"All MARINA registration, licensing, permit, and certification fees are for the account of the Customer unless otherwise stated. The Company shall provide the Builder's Certificate and other builder-side documents required to support the Customer's registration application."
+    },
+    output: { showInternalCosts:false },
+    createdAt: Date.now(), updatedAt: Date.now()
+  };
+}
+function nextRefNo(){
+  const yr = new Date().getFullYear().toString().slice(2);
+  const n = QUOTES.length + 1;
+  return 'Q'+yr+'-'+String(n).padStart(3,'0');
+}
+
+/* ============================================================
+   CALCULATION ENGINE
+   ============================================================ */
+const FT2M = 0.3048;
+function hullAreaEstimate(h){
+  if(h.hullAreaOverride!=null && h.hullAreaOverride!=='') return Number(h.hullAreaOverride);
+  const loaM = h.loa*FT2M, beamM = h.beam*FT2M;
+  const kFactor = { 'Monohull':1.35, 'Catamaran':1.15, 'Passenger Boat':1.5, 'Fishing Boat':1.4, 'Patrol Boat':1.45, 'Pontoon':1.2 }[h.boatType] || 1.4;
+  const perHull = loaM*beamM*kFactor;
+  return +(perHull * (h.numHulls||1)).toFixed(2);
+}
+function computeHull(q){
+  const h = q.hull, r = q.rates;
+  const area = hullAreaEstimate(h);
+  const glassWeight = area * h.layers * h.glassPerLayer;
+  const resinWeight = glassWeight * r.resinRatio;
+  const resinLiters = resinWeight / r.resinDensity;
+  const gelcoatWeight = area * r.gelcoatCoverage;
+  const coreCost = h.coreEnabled ? (Number(h.coreArea)||0) * r.corePerSqm : 0;
+  const glassCost = glassWeight * r.fiberglassPerKg;
+  const resinCost = resinLiters * r.resinPerLiter;
+  const gelcoatCost = gelcoatWeight * r.gelcoatPerKg;
+  const total = glassCost + resinCost + gelcoatCost + coreCost;
+  return { area, glassWeight, resinWeight, resinLiters, gelcoatWeight, glassCost, resinCost, gelcoatCost, coreCost, total };
+}
+function computePaint(q, hullCalc){
+  const p = q.paint, r = q.rates;
+  const area = (p.areaOverride!=null && p.areaOverride!=='') ? Number(p.areaOverride) : hullCalc.area;
+  const primerLiters = area / r.primerCoverage;
+  const paintLiters = (area / r.paintCoverage) * (p.coats||1);
+  const primerCost = primerLiters * r.primerPerLiter;
+  const paintCost = paintLiters * r.paintPerLiter;
+  const total = primerCost + paintCost;
+  return { area, primerLiters, paintLiters, primerCost, paintCost, total };
+}
+function computeStructural(q){
+  const rows = (q.structural.items||[]).map(a=>{
+    const total = (Number(a.qty)||0) * (Number(a.unitPrice)||0);
+    return {...a, total};
+  });
+  const total = rows.reduce((s,r)=>s+r.total,0);
+  return { rows, total };
+}
+function computeAccessories(q){
+  const rows = q.accessories.map(a=>{
+    const base = (Number(a.qty)||0) * (Number(a.unitPrice)||0);
+    const total = base * (1 + (Number(a.markup)||0)/100);
+    return {...a, base, total};
+  });
+  const total = rows.reduce((s,r)=>s+r.total,0);
+  return { rows, total };
+}
+function computeEngine(q){
+  const e = q.engine;
+  const unitsCost = (Number(e.qty)||0) * (Number(e.unitPrice)||0);
+  const total = unitsCost + (Number(e.installation)||0);
+  return { unitsCost, total };
+}
+function computeLabor(q){
+  const l = q.labor, rates = q.rates.laborRates;
+  const rows = Object.keys(l).map(k=>({
+    key:k, hours:Number(l[k])||0, rate: Number(rates[k])||0, cost: (Number(l[k])||0)*(Number(rates[k])||0)
+  }));
+  const total = rows.reduce((s,r)=>s+r.cost,0);
+  return { rows, total };
+}
+function computeAll(q){
+  const hull = computeHull(q);
+  const paint = computePaint(q, hull);
+  const structural = computeStructural(q);
+  const acc = computeAccessories(q);
+  const eng = computeEngine(q);
+  const labor = computeLabor(q);
+  const materialCost = hull.total + paint.total + structural.total;
+  const equipmentCost = acc.total + eng.total;
+  const laborCost = labor.total;
+  const base = materialCost + equipmentCost + laborCost;
+  const overheadCost = base * (Number(q.rates.overheadPct)||0)/100;
+  const contingencyCost = base * (Number(q.rates.contingencyPct)||0)/100;
+  const marginCost = base * (Number(q.rates.marginPct)||0)/100;
+  const sch = q.schedule || { startDate: todayISO(), standardDays: q.rates.standardDurationDays||180, requestedDays: q.rates.standardDurationDays||180 };
+  const standardDays = Number(sch.standardDays)||0;
+  const requestedDays = Number(sch.requestedDays)||standardDays;
+  const durationCost = requestedDays * (Number(q.rates.dailyRate)||0);
+  const isRush = standardDays>0 && requestedDays < standardDays;
+  const rushFee = isRush ? base * (Number(q.rates.rushFeePct)||0)/100 : 0;
+  const deliveryDate = sch.startDate ? new Date(new Date(sch.startDate).getTime() + requestedDays*86400000) : null;
+  const finalTotal = materialCost + laborCost + equipmentCost + overheadCost + contingencyCost + marginCost + durationCost + rushFee;
+  return { hull, paint, structural, acc, eng, labor, materialCost, equipmentCost, laborCost, overheadCost, contingencyCost, marginCost, base, standardDays, requestedDays, durationCost, isRush, rushFee, deliveryDate, finalTotal };
+}
+
+/* ============================================================
+   ROUTER / NAV
+   ============================================================ */
+const ROUTES = [
+  {id:'dashboard', label:'Dashboard', icon:'grid'},
+  {id:'editor', label:'New Quotation', icon:'plus'},
+  {id:'quotes', label:'Quotations', icon:'list'},
+  {id:'customers', label:'Customers', icon:'user'},
+  {id:'templates', label:'Boat Templates', icon:'ship'},
+  {id:'pricing', label:'Pricing Database', icon:'db'},
+];
+let CURRENT = { view:'dashboard', quoteId:null, tab:'client' };
+
+function icon(name){
+  const p = {
+    grid:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
+    plus:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+    list:'<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+    user:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    ship:'<path d="M2 21c1.6 1.2 3.5 1.2 5 0 1.6 1.2 3.5 1.2 5 0 1.6 1.2 3.5 1.2 5 0"/><path d="M4 17l1-8h6l1 8"/><path d="M11 9V4h3l3 5"/>',
+    db:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+    search:'<circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  }[name]||'';
+  return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+}
+
+function renderNav(){
+  const nav = document.getElementById('navList');
+  nav.innerHTML = ROUTES.map((r,i)=>`
+    <div class="nav-item ${CURRENT.view===r.id?'active':''}" data-route="${r.id}">
+      ${icon(r.icon)}<span>${r.label}</span>
+    </div>`).join('');
+  nav.querySelectorAll('.nav-item').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const route = el.dataset.route;
+      if(route==='editor'){ openEditor(null); }
+      else { CURRENT.view = route; renderAll(); }
+    });
+  });
+}
+
+function renderAll(){
+  renderNav();
+  const titleMap = {dashboard:'Dashboard', editor:'Quotation Editor', quotes:'Quotations', customers:'Customer Database', templates:'Boat Templates', pricing:'Pricing Database & Settings'};
+  document.getElementById('topbarTitle').textContent = titleMap[CURRENT.view] || '';
+  const content = document.getElementById('content');
+  const actions = document.getElementById('topbarActions');
+  actions.innerHTML='';
+  if(CURRENT.view==='dashboard') renderDashboard(content, actions);
+  else if(CURRENT.view==='editor') renderEditor(content, actions);
+  else if(CURRENT.view==='quotes') renderQuotesList(content, actions);
+  else if(CURRENT.view==='customers') renderCustomers(content, actions);
+  else if(CURRENT.view==='templates') renderTemplates(content, actions);
+  else if(CURRENT.view==='pricing') renderPricing(content, actions);
+}
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+function renderDashboard(content, actions){
+  actions.innerHTML = `<button class="btn btn-primary" id="btnNewQ">${icon('plus')} New Quotation</button>`;
+  const totalVal = QUOTES.reduce((s,q)=>s+computeAll(q).finalTotal,0);
+  const approved = QUOTES.filter(q=>q.status==='approved').length;
+  const avg = QUOTES.length? totalVal/QUOTES.length : 0;
+  const recent = [...QUOTES].sort((a,b)=>b.updatedAt-a.updatedAt).slice(0,6);
+
+  content.innerHTML = `
+    <div class="stat-row">
+      <div class="stat"><div class="lbl">Total Quotations</div><div class="val">${QUOTES.length}</div></div>
+      <div class="stat teal"><div class="lbl">Total Quoted Value</div><div class="val">${fmt(totalVal)}</div></div>
+      <div class="stat amber"><div class="lbl">Average Quotation</div><div class="val">${fmt(avg)}</div></div>
+      <div class="stat"><div class="lbl">Approved</div><div class="val">${approved}</div></div>
+    </div>
+    <div class="grid g2" style="align-items:start;">
+      <div class="card">
+        <div class="card-head"><h3>Recent Quotations</h3><span class="btn btn-ghost btn-sm" id="viewAllQ">View All</span></div>
+        <div class="card-body" style="padding:0;">
+          ${recent.length? `<table><thead><tr><th>Ref No.</th><th>Client</th><th>Boat</th><th class="right">Total</th><th>Status</th><th></th></tr></thead><tbody>
+            ${recent.map(q=>{
+              const t = computeAll(q).finalTotal;
+              return `<tr>
+                <td class="mono">${q.refNo}</td>
+                <td>${q.customerSnap.name||'—'}</td>
+                <td>${q.hull.boatType} · ${q.hull.loa||0}ft</td>
+                <td class="right mono">${fmt(t)}</td>
+                <td><span class="badge ${q.status}">${q.status}</span></td>
+                <td class="right"><span class="btn btn-ghost btn-sm" data-open="${q.id}">Open →</span></td>
+              </tr>`;
+            }).join('')}
+          </tbody></table>` : `<div class="empty">No quotations yet. Create your first one to see it here.</div>`}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>Quick Actions</h3></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:10px;">
+          <button class="btn" id="qaTemplates">${icon('ship')} Start from a Boat Template</button>
+          <button class="btn" id="qaCustomer">${icon('user')} Add a Customer</button>
+          <button class="btn" id="qaPricing">${icon('db')} Update Pricing Database</button>
+        </div>
+        <div class="card-head" style="border-top:1px solid var(--paper-line);"><h3>System Notes</h3></div>
+        <div class="card-body section-lead">
+          Quotations calculate automatically from hull dimensions, laminate schedule, paint coverage, itemized accessories, engine package, and labor hours — all priced from the editable Pricing Database. Update rates once; every new quotation applies them.
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('btnNewQ').onclick = ()=>openEditor(null);
+  document.getElementById('viewAllQ').onclick = ()=>{CURRENT.view='quotes'; renderAll();};
+  document.getElementById('qaTemplates').onclick = ()=>{CURRENT.view='templates'; renderAll();};
+  document.getElementById('qaCustomer').onclick = ()=>{CURRENT.view='customers'; renderAll();};
+  document.getElementById('qaPricing').onclick = ()=>{CURRENT.view='pricing'; renderAll();};
+  content.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openEditor(b.dataset.open));
+}
+
+/* ============================================================
+   QUOTATIONS LIST
+   ============================================================ */
+function renderQuotesList(content, actions){
+  actions.innerHTML = `<button class="btn btn-primary" id="btnNewQ2">${icon('plus')} New Quotation</button>`;
+  content.innerHTML = `
+    <div class="pill-row">
+      <div class="search"><span>${icon('search')}</span><input id="qSearch" placeholder="Search by ref no., client, boat type…" style="width:280px;padding:8px 10px 8px 30px;border:1px solid #d7d0bc;border-radius:3px;"></div>
+      <select id="qFilterStatus" style="padding:8px 10px;border:1px solid #d7d0bc;border-radius:3px;">
+        <option value="">All statuses</option>
+        <option value="draft">Draft</option>
+        <option value="sent">Sent</option>
+        <option value="approved">Approved</option>
+      </select>
+    </div>
+    <div class="card"><div class="card-body" style="padding:0;" id="qTableWrap"></div></div>
+  `;
+  document.getElementById('btnNewQ2').onclick = ()=>openEditor(null);
+  const wrap = document.getElementById('qTableWrap');
+  function draw(){
+    const term = document.getElementById('qSearch').value.toLowerCase();
+    const st = document.getElementById('qFilterStatus').value;
+    let rows = [...QUOTES].sort((a,b)=>b.updatedAt-a.updatedAt).filter(q=>{
+      const hay = (q.refNo+' '+q.customerSnap.name+' '+q.hull.boatType).toLowerCase();
+      return hay.includes(term) && (!st || q.status===st);
+    });
+    wrap.innerHTML = rows.length? `<table><thead><tr><th>Ref No.</th><th>Date</th><th>Client</th><th>Boat</th><th class="right">Total</th><th>Status</th><th></th></tr></thead><tbody>
+      ${rows.map(q=>{
+        const t = computeAll(q).finalTotal;
+        return `<tr>
+          <td class="mono">${q.refNo}</td>
+          <td class="mono">${q.date}</td>
+          <td>${q.customerSnap.name||'—'}</td>
+          <td>${q.hull.boatType} · ${q.hull.loa||0}ft</td>
+          <td class="right mono">${fmt(t)}</td>
+          <td><span class="badge ${q.status}">${q.status}</span></td>
+          <td class="right" style="white-space:nowrap;">
+            <span class="btn btn-ghost btn-sm" data-open="${q.id}">Open</span>
+            <span class="btn btn-ghost btn-sm" data-dup="${q.id}">Duplicate</span>
+            <span class="btn btn-ghost btn-sm" data-del="${q.id}" style="color:var(--danger);">Delete</span>
+          </td>
+        </tr>`;
+      }).join('')}
+    </tbody></table>` : `<div class="empty">No quotations match your search.</div>`;
+    wrap.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openEditor(b.dataset.open));
+    wrap.querySelectorAll('[data-dup]').forEach(b=>b.onclick=()=>{
+      const src = QUOTES.find(x=>x.id===b.dataset.dup);
+      const copy = JSON.parse(JSON.stringify(src));
+      copy.id = uid('q'); copy.refNo = nextRefNo()+'A'; copy.status='draft'; copy.date=todayISO();
+      copy.createdAt = Date.now(); copy.updatedAt = Date.now();
+      QUOTES.push(copy); save(DB_KEYS.quotes, QUOTES); toast('Quotation duplicated'); draw();
+    });
+    wrap.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+      if(confirm('Delete this quotation? This cannot be undone.')){
+        QUOTES = QUOTES.filter(x=>x.id!==b.dataset.del); save(DB_KEYS.quotes, QUOTES); toast('Quotation deleted'); draw();
+      }
+    });
+  }
+  document.getElementById('qSearch').oninput = draw;
+  document.getElementById('qFilterStatus').onchange = draw;
+  draw();
+}
+
+/* ============================================================
+   CUSTOMERS
+   ============================================================ */
+function renderCustomers(content, actions){
+  actions.innerHTML = `<button class="btn btn-primary" id="btnAddCust">${icon('plus')} Add Customer</button>`;
+  content.innerHTML = `<div class="card"><div class="card-body" style="padding:0;" id="custWrap"></div></div>`;
+  document.getElementById('btnAddCust').onclick = ()=>{
+    CUSTOMERS.push({id:uid('c'), name:'New Customer', email:'', contact:'', address:''});
+    save(DB_KEYS.customers, CUSTOMERS); draw();
+  };
+  const wrap = document.getElementById('custWrap');
+  function draw(){
+    wrap.innerHTML = CUSTOMERS.length? `<table><thead><tr><th>Name</th><th>Email</th><th>Contact No.</th><th>Address</th><th></th></tr></thead><tbody>
+      ${CUSTOMERS.map(c=>`<tr>
+        <td><input class="tbl-input" data-f="name" data-id="${c.id}" value="${esc(c.name)}"></td>
+        <td><input class="tbl-input" data-f="email" data-id="${c.id}" value="${esc(c.email)}"></td>
+        <td><input class="tbl-input" data-f="contact" data-id="${c.id}" value="${esc(c.contact)}"></td>
+        <td><input class="tbl-input" data-f="address" data-id="${c.id}" value="${esc(c.address)}"></td>
+        <td class="right"><span class="btn btn-ghost btn-sm" data-del="${c.id}" style="color:var(--danger);">Remove</span></td>
+      </tr>`).join('')}
+    </tbody></table>` : `<div class="empty">No customers yet. Add one to reuse across quotations.</div>`;
+    wrap.querySelectorAll('input').forEach(inp=>{
+      inp.onchange = ()=>{
+        const c = CUSTOMERS.find(x=>x.id===inp.dataset.id);
+        c[inp.dataset.f] = inp.value; save(DB_KEYS.customers, CUSTOMERS); toast('Saved');
+      };
+    });
+    wrap.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+      CUSTOMERS = CUSTOMERS.filter(x=>x.id!==b.dataset.del); save(DB_KEYS.customers, CUSTOMERS); draw();
+    });
+  }
+  draw();
+}
+function esc(s){ return (s||'').toString().replace(/"/g,'&quot;'); }
+
+/* ============================================================
+   BOAT TEMPLATES
+   ============================================================ */
+function renderTemplates(content, actions){
+  actions.innerHTML = `<button class="btn btn-primary" id="btnSaveCurrentAsTpl">${icon('plus')} New Blank Template</button>`;
+  content.innerHTML = `<div class="section-lead">Templates pre-fill a new quotation with typical hull dimensions, accessories, engine, and labor hours for a boat class. Start a quotation from a template, then adjust for the specific job.</div>
+  <div class="grid g3" id="tplGrid"></div>`;
+  document.getElementById('btnSaveCurrentAsTpl').onclick = ()=>{
+    TEMPLATES.push({ id:uid('tpl'), name:'Untitled Template', boatType:'Passenger Boat', loa:0,beam:0,depth:0,numHulls:1,
+      hullAreaOverride:null, layers:3, glassPerLayer:0.6, paintArea:null, coats:3, accessories:[], engine:{model:'',hp:0,qty:1,unitPrice:0,installation:0}, labor:{fabrication:0,fiberglass:0,painting:0,electrical:0,assembly:0,testing:0} });
+    save(DB_KEYS.templates, TEMPLATES); draw();
+  };
+  const grid = document.getElementById('tplGrid');
+  function draw(){
+    grid.innerHTML = TEMPLATES.map(t=>`
+      <div class="card">
+        <div class="card-body">
+          <div class="field"><label>Template Name</label><input class="tpl-name" data-id="${t.id}" value="${esc(t.name)}"></div>
+          <div class="grid g2">
+            <div class="field"><label>Boat Type</label>
+              <select class="tpl-type" data-id="${t.id}">
+                ${['Monohull','Catamaran','Passenger Boat','Fishing Boat','Patrol Boat','Pontoon'].map(o=>`<option ${t.boatType===o?'selected':''}>${o}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field"><label>LOA (ft)</label><input type="number" class="tpl-f" data-id="${t.id}" data-f="loa" value="${t.loa||0}"></div>
+          </div>
+          <div class="section-lead" style="margin:8px 0;">${(t.accessories||[]).length} accessory line items · Engine: ${t.engine?.model||'—'}</div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-primary btn-sm" data-use="${t.id}">Use Template</button>
+            <button class="btn btn-danger btn-sm" data-del="${t.id}">Delete</button>
+          </div>
+        </div>
+      </div>`).join('') || `<div class="empty">No templates yet.</div>`;
+    grid.querySelectorAll('.tpl-name').forEach(i=>i.onchange=()=>{ TEMPLATES.find(t=>t.id===i.dataset.id).name=i.value; save(DB_KEYS.templates,TEMPLATES); });
+    grid.querySelectorAll('.tpl-type').forEach(i=>i.onchange=()=>{ TEMPLATES.find(t=>t.id===i.dataset.id).boatType=i.value; save(DB_KEYS.templates,TEMPLATES); });
+    grid.querySelectorAll('.tpl-f').forEach(i=>i.onchange=()=>{ TEMPLATES.find(t=>t.id===i.dataset.id)[i.dataset.f]=Number(i.value); save(DB_KEYS.templates,TEMPLATES); });
+    grid.querySelectorAll('[data-use]').forEach(b=>b.onclick=()=>openEditor(null, b.dataset.use));
+    grid.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ TEMPLATES = TEMPLATES.filter(t=>t.id!==b.dataset.del); save(DB_KEYS.templates,TEMPLATES); draw(); });
+  }
+  draw();
+}
+
+/* ============================================================
+   PRICING DATABASE
+   ============================================================ */
+function renderPricing(content, actions){
+  actions.innerHTML = `<button class="btn btn-primary" id="btnSavePricing">Save Pricing Database</button> <button class="btn btn-ghost" id="btnResetPricing">Reset to Defaults</button>`;
+  const r = PRICING;
+  content.innerHTML = `
+    <div class="section-lead">These values feed every new quotation's default rates (each quotation keeps its own editable snapshot, so changes here won't retroactively alter saved quotes).</div>
+    <div class="grid g2">
+      <div class="card"><div class="card-head"><h3>Hull Materials</h3></div><div class="card-body grid g2">
+        ${numField('Fiberglass (₱/kg)','fiberglassPerKg',r.fiberglassPerKg)}
+        ${numField('Resin (₱/liter)','resinPerLiter',r.resinPerLiter)}
+        ${numField('Resin Density (kg/L)','resinDensity',r.resinDensity)}
+        ${numField('Resin:Glass Ratio','resinRatio',r.resinRatio)}
+        ${numField('Gelcoat (₱/kg)','gelcoatPerKg',r.gelcoatPerKg)}
+        ${numField('Gelcoat Coverage (kg/sqm)','gelcoatCoverage',r.gelcoatCoverage)}
+        ${numField('Core Material (₱/sqm)','corePerSqm',r.corePerSqm)}
+      </div></div>
+      <div class="card"><div class="card-head"><h3>Paint &amp; Finishing</h3></div><div class="card-body grid g2">
+        ${numField('Primer (₱/liter)','primerPerLiter',r.primerPerLiter)}
+        ${numField('Primer Coverage (sqm/L)','primerCoverage',r.primerCoverage)}
+        ${numField('Topcoat Paint (₱/liter)','paintPerLiter',r.paintPerLiter)}
+        ${numField('Paint Coverage (sqm/L per coat)','paintCoverage',r.paintCoverage)}
+      </div></div>
+      <div class="card"><div class="card-head"><h3>Labor Rates (₱/hour)</h3></div><div class="card-body grid g3">
+        ${Object.keys(r.laborRates).map(k=>numField(cap(k),'labor_'+k,r.laborRates[k])).join('')}
+      </div></div>
+      <div class="card"><div class="card-head"><h3>Overhead, Contingency &amp; Margin</h3></div><div class="card-body grid g3">
+        ${numField('Overhead (%)','overheadPct',r.overheadPct)}
+        ${numField('Contingency (%)','contingencyPct',r.contingencyPct)}
+        ${numField('Profit Margin (%)','marginPct',r.marginPct)}
+      </div></div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="card-head"><h3>Engine Package Catalog</h3><button class="btn btn-sm" id="addEngine">${icon('plus')} Add Engine Package</button></div>
+      <div class="card-body" style="padding:0;"><table><thead><tr><th>Model / Description</th><th>HP</th><th class="right">Price (₱)</th><th></th></tr></thead><tbody id="engineRows"></tbody></table></div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="card-head"><h3>Standard Accessory Catalog</h3><button class="btn btn-sm" id="addAccItem">${icon('plus')} Add Item</button></div>
+      <div class="card-body" style="padding:0;"><table><thead><tr><th>Category</th><th>Item Name</th><th class="right">Unit Price (₱)</th><th></th></tr></thead><tbody id="accCatRows"></tbody></table></div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="card-head"><h3>Structural Components &amp; Core Materials Catalog</h3><button class="btn btn-sm" id="addStructItem">${icon('plus')} Add Item</button></div>
+      <div class="card-body section-lead">Stiffeners, bulkheads, urethane foam, coring, and other structural materials used in the Hull tab.</div>
+      <div class="card-body" style="padding:0;"><table><thead><tr><th>Category</th><th>Item Name</th><th>Unit</th><th class="right">Unit Price (₱)</th><th></th></tr></thead><tbody id="structCatRows"></tbody></table></div>
+    </div>
+  `;
+  function numField(label,key,val){
+    return `<div class="field"><label>${label}</label><input type="number" step="any" class="pf" data-key="${key}" value="${val}"></div>`;
+  }
+  function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+
+  function drawEngines(){
+    document.getElementById('engineRows').innerHTML = r.engineDb.map(e=>`
+      <tr>
+        <td><input class="tbl-input eng-f" data-id="${e.id}" data-f="name" value="${esc(e.name)}"></td>
+        <td style="width:80px;"><input class="tbl-input num eng-f" data-id="${e.id}" data-f="hp" type="number" value="${e.hp}"></td>
+        <td style="width:150px;"><input class="tbl-input num eng-f" data-id="${e.id}" data-f="price" type="number" value="${e.price}"></td>
+        <td class="right"><span class="btn btn-ghost btn-sm" data-del-eng="${e.id}" style="color:var(--danger);">Remove</span></td>
+      </tr>`).join('');
+    document.querySelectorAll('.eng-f').forEach(i=>i.onchange=()=>{
+      const e = r.engineDb.find(x=>x.id===i.dataset.id);
+      e[i.dataset.f] = i.dataset.f==='name'? i.value : Number(i.value);
+    });
+    document.querySelectorAll('[data-del-eng]').forEach(b=>b.onclick=()=>{ r.engineDb = r.engineDb.filter(x=>x.id!==b.dataset.delEng); drawEngines(); });
+  }
+  document.getElementById('addEngine').onclick=()=>{ r.engineDb.push({id:uid('eng'),name:'New Engine Package',hp:0,price:0}); drawEngines(); };
+
+  function drawAcc(){
+    document.getElementById('accCatRows').innerHTML = r.accessoryCatalog.map((a,idx)=>`
+      <tr>
+        <td><input class="tbl-input acc-f" data-idx="${idx}" data-f="cat" value="${esc(a.cat)}"></td>
+        <td><input class="tbl-input acc-f" data-idx="${idx}" data-f="name" value="${esc(a.name)}"></td>
+        <td style="width:150px;"><input class="tbl-input num acc-f" data-idx="${idx}" data-f="unitPrice" type="number" value="${a.unitPrice}"></td>
+        <td class="right"><span class="btn btn-ghost btn-sm" data-del-acc="${idx}" style="color:var(--danger);">Remove</span></td>
+      </tr>`).join('');
+    document.querySelectorAll('.acc-f').forEach(i=>i.onchange=()=>{
+      r.accessoryCatalog[i.dataset.idx][i.dataset.f] = i.dataset.f==='unitPrice'? Number(i.value) : i.value;
+    });
+    document.querySelectorAll('[data-del-acc]').forEach(b=>b.onclick=()=>{ r.accessoryCatalog.splice(Number(b.dataset.delAcc),1); drawAcc(); });
+  }
+  document.getElementById('addAccItem').onclick=()=>{ r.accessoryCatalog.push({cat:'Custom',name:'New Item',unitPrice:0}); drawAcc(); };
+
+  function drawStructCat(){
+    document.getElementById('structCatRows').innerHTML = r.structuralCatalog.map((a,idx)=>`
+      <tr>
+        <td><input class="tbl-input structcat-f" data-idx="${idx}" data-f="cat" value="${esc(a.cat)}"></td>
+        <td><input class="tbl-input structcat-f" data-idx="${idx}" data-f="name" value="${esc(a.name)}"></td>
+        <td style="width:100px;"><input class="tbl-input structcat-f" data-idx="${idx}" data-f="unit" value="${esc(a.unit)}"></td>
+        <td style="width:150px;"><input class="tbl-input num structcat-f" data-idx="${idx}" data-f="unitPrice" type="number" value="${a.unitPrice}"></td>
+        <td class="right"><span class="btn btn-ghost btn-sm" data-del-structcat="${idx}" style="color:var(--danger);">Remove</span></td>
+      </tr>`).join('');
+    document.querySelectorAll('.structcat-f').forEach(i=>i.onchange=()=>{
+      r.structuralCatalog[i.dataset.idx][i.dataset.f] = i.dataset.f==='unitPrice'? Number(i.value) : i.value;
+    });
+    document.querySelectorAll('[data-del-structcat]').forEach(b=>b.onclick=()=>{ r.structuralCatalog.splice(Number(b.dataset.delStructcat),1); drawStructCat(); });
+  }
+  document.getElementById('addStructItem').onclick=()=>{ r.structuralCatalog.push({cat:'Other Structural Materials',name:'New Item',unit:'pc',unitPrice:0}); drawStructCat(); };
+
+  drawEngines(); drawAcc(); drawStructCat();
+
+  document.getElementById('btnSavePricing').onclick = ()=>{
+    document.querySelectorAll('.pf').forEach(i=>{
+      const k = i.dataset.key, v = Number(i.value);
+      if(k.startsWith('labor_')) r.laborRates[k.replace('labor_','')] = v;
+      else r[k] = v;
+    });
+    save(DB_KEYS.pricing, PRICING); toast('Pricing database saved');
+  };
+  document.getElementById('btnResetPricing').onclick = ()=>{
+    if(confirm('Reset all pricing to factory defaults?')){ PRICING = JSON.parse(JSON.stringify(DEFAULT_PRICING)); save(DB_KEYS.pricing,PRICING); renderPricing(content,actions); }
+  };
+}
+
+/* ============================================================
+   QUOTATION EDITOR
+   ============================================================ */
+function openEditor(quoteId, templateId){
+  CURRENT.view = 'editor'; CURRENT.tab='client';
+  if(quoteId){ CURRENT.quoteId = quoteId; }
+  else {
+    const q = blankQuote();
+    if(templateId){
+      const t = TEMPLATES.find(x=>x.id===templateId);
+      if(t){
+        q.hull = { boatType:t.boatType, loa:t.loa, beam:t.beam, depth:t.depth, numHulls:t.numHulls||1, hullAreaOverride:t.hullAreaOverride, layers:t.layers, glassPerLayer:t.glassPerLayer, coreArea:0, coreEnabled:false };
+        q.paint = { areaOverride:t.paintArea, coats:t.coats, paintType:'Marine Polyurethane Topcoat' };
+        q.accessories = (t.accessories||[]).map(a=>({...a, id:uid('ai')}));
+        q.engine = {...t.engine};
+        q.labor = {...t.labor};
+        q.project.title = t.name;
+      }
+    }
+    QUOTES.push(q); save(DB_KEYS.quotes, QUOTES);
+    CURRENT.quoteId = q.id;
+  }
+  renderAll();
+}
+function getCurrentQuote(){ return QUOTES.find(q=>q.id===CURRENT.quoteId); }
+function ensureQuoteDefaults(q){
+  if(!q.structural) q.structural = { items:[] };
+  if(!q.schedule) q.schedule = { startDate: q.date||todayISO(), standardDays: PRICING.standardDurationDays, requestedDays: PRICING.standardDurationDays };
+  if(q.rates.dailyRate===undefined) q.rates.dailyRate = PRICING.dailyRate;
+  if(q.rates.standardDurationDays===undefined) q.rates.standardDurationDays = PRICING.standardDurationDays;
+  if(q.rates.rushFeePct===undefined) q.rates.rushFeePct = PRICING.rushFeePct;
+  if(!q.marina){
+    q.marina = {
+      items: [
+        {name:"MARINA Construction Permit (Certificate of Construction)", responsibility:'Company', remarks:'Filed prior to keel-laying'},
+        {name:"Certificate of Vessel Registry (COR)", responsibility:'Customer', remarks:''},
+        {name:"Coastwise License / Certificate of Public Convenience", responsibility:'Customer', remarks:'If for commercial operation'},
+        {name:"Load Line Certificate", responsibility:'Customer', remarks:''},
+        {name:"Cargo Ship Safety Equipment Certificate", responsibility:'Customer', remarks:''},
+        {name:"Certificate of Inspection (COI)", responsibility:'Customer', remarks:'Annual renewal'},
+        {name:"Tonnage Certificate", responsibility:'Customer', remarks:''},
+        {name:"Builder's Certificate", responsibility:'Company', remarks:'Issued upon delivery'},
+      ],
+      notes:"All MARINA registration, licensing, permit, and certification fees are for the account of the Customer unless otherwise stated. The Company shall provide the Builder's Certificate and other builder-side documents required to support the Customer's registration application."
+    };
+  }
+  if(!q.output) q.output = { showInternalCosts:false };
+  if(q.output.showInternalCosts === undefined) q.output.showInternalCosts = false;
+  if(!Array.isArray(q.terms)){
+    const t = q.terms || {};
+    q.terms = [
+      {title:'Completion Time', body:t.completion||'12 months from date of receipt of downpayment and Purchase Order'},
+      {title:'Payment Terms', body:t.payment||'20% downpayment upon confirmation of order; progress billing per agreed schedule; 10% upon completion and sea trial before delivery'},
+      {title:'Hull Warranty', body:t.warranty||'Two (2) years on hull structure for pleasure use, one (1) year for commercial use, covering manufacturing defects under normal use conditions.'},
+      {title:'Warranty Exclusions', body:t.exclusions||'Warranty excludes normal wear and tear, misuse or negligence, unauthorized modification, force majeure, and third-party accessories which follow manufacturer warranty.'},
+      {title:'Delivery', body:t.delivery||'Delivery outside factory premises subject to separate agreement and additional logistics charges.'},
+      {title:'Regulatory Compliance', body:t.compliance||'Boat registration, MARINA licenses, permits and certificates shall be borne by the customer.'},
+    ];
+  }
+}
+function persistQuote(q){ q.updatedAt = Date.now(); save(DB_KEYS.quotes, QUOTES); }
+
+const EDITOR_TABS = [
+  {id:'client', n:'01', label:'Client & Project'},
+  {id:'hull', n:'02', label:'Hull'},
+  {id:'paint', n:'03', label:'Paint & Finish'},
+  {id:'accessories', n:'04', label:'Accessories'},
+  {id:'engine', n:'05', label:'Engine'},
+  {id:'labor', n:'06', label:'Labor'},
+  {id:'pricing', n:'07', label:'Timeline & Margin'},
+  {id:'marina', n:'08', label:'MARINA Documentation'},
+  {id:'terms', n:'09', label:'Terms & Conditions'},
+  {id:'output', n:'10', label:'Quotation Output'},
+];
+
+function renderEditor(content, actions){
+  let q = getCurrentQuote();
+  if(!q){ CURRENT.view='dashboard'; renderAll(); return; }
+  ensureQuoteDefaults(q);
+
+  actions.innerHTML = `
+    <select id="statusSel" style="padding:7px 10px;border:1px solid #d7d0bc;border-radius:3px;margin-right:8px;">
+      ${['draft','sent','approved'].map(s=>`<option value="${s}" ${q.status===s?'selected':''}>${s[0].toUpperCase()+s.slice(1)}</option>`).join('')}
+    </select>
+    <button class="btn" id="btnBackList">${icon('list')} All Quotations</button>
+    <button class="btn btn-primary" id="btnGoOutput">Preview Output →</button>
+  `;
+
+  content.innerHTML = `
+    <div class="tabs" id="editTabs"></div>
+    <div class="editor-grid" id="editorGrid">
+      <div id="tabHost"></div>
+      <div class="summary-panel">
+        <div class="card">
+          <div class="card-head"><h3>Live Total</h3></div>
+          <div class="card-body" id="liveSummary"></div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('btnBackList').onclick = ()=>{ CURRENT.view='quotes'; renderAll(); };
+  document.getElementById('btnGoOutput').onclick = ()=>{ CURRENT.tab='output'; renderEditor(content,actions); };
+  document.getElementById('statusSel').onchange = (e)=>{ q.status = e.target.value; persistQuote(q); toast('Status updated'); };
+
+  const tabsEl = document.getElementById('editTabs');
+  tabsEl.innerHTML = EDITOR_TABS.map(t=>`<div class="tab ${CURRENT.tab===t.id?'active':''}" data-tab="${t.id}"><span class="n">${t.n}</span>${t.label}</div>`).join('');
+  tabsEl.querySelectorAll('.tab').forEach(el=>el.onclick=()=>{ CURRENT.tab = el.dataset.tab; renderEditor(content,actions); });
+
+  const host = document.getElementById('tabHost');
+  const renderers = { client:tabClient, hull:tabHull, paint:tabPaint, accessories:tabAccessories, engine:tabEngine, labor:tabLabor, pricing:tabPricing, marina:tabMarina, terms:tabTerms, output:tabOutput };
+  renderers[CURRENT.tab](host, q);
+
+  if(CURRENT.tab!=='output') updateLiveSummary(q);
+}
+
+function updateLiveSummary(q){
+  const c = computeAll(q);
+  document.getElementById('liveSummary').innerHTML = `
+    <div class="spec-plate" style="margin:0 0 14px;padding:12px 14px;">
+      <div class="row">
+        <div class="cell"><div class="l">LOA</div><div class="v">${q.hull.loa||0}′</div></div>
+        <div class="cell"><div class="l">Beam</div><div class="v">${q.hull.beam||0}′</div></div>
+        <div class="cell"><div class="l">Hull Area</div><div class="v">${fmtNum(c.hull.area,1)}m²</div></div>
+      </div>
+    </div>
+    <div class="sum-row"><span class="k">Material Cost</span><span class="v">${fmt(c.materialCost)}</span></div>
+    <div class="sum-row"><span class="k">Labor Cost</span><span class="v">${fmt(c.laborCost)}</span></div>
+    <div class="sum-row"><span class="k">Equipment Cost</span><span class="v">${fmt(c.equipmentCost)}</span></div>
+    <div class="sum-row"><span class="k">Overhead (${q.rates.overheadPct}%)</span><span class="v">${fmt(c.overheadCost)}</span></div>
+    <div class="sum-row"><span class="k">Contingency (${q.rates.contingencyPct}%)</span><span class="v">${fmt(c.contingencyCost)}</span></div>
+    <div class="sum-row"><span class="k">Profit Margin (${q.rates.marginPct}%)</span><span class="v">${fmt(c.marginCost)}</span></div>
+    <div class="sum-row"><span class="k">Duration (${c.requestedDays}d × ${fmt(q.rates.dailyRate)})</span><span class="v">${fmt(c.durationCost)}</span></div>
+    <div class="sum-row"><span class="k">Rush Surcharge${c.isRush?'':' (n/a)'}</span><span class="v">${fmt(c.rushFee)}</span></div>
+    <div class="sum-total"><span class="k">Final Price</span><span class="v">${fmt(c.finalTotal)}</span></div>
+  `;
+}
+
+/* ---- Tab: Client & Project ---- */
+function tabClient(host, q){
+  host.innerHTML = `
+    <div class="card">
+      <div class="card-head"><h3>Client Information</h3></div>
+      <div class="card-body">
+        <div class="field"><label>Load Existing Customer</label>
+          <select id="custPick"><option value="">— Select or fill manually below —</option>${CUSTOMERS.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>
+        </div>
+        <div class="grid g2">
+          <div class="field"><label>Client / Company Name</label><input id="cName" value="${esc(q.customerSnap.name)}"></div>
+          <div class="field"><label>Email Address</label><input id="cEmail" value="${esc(q.customerSnap.email)}"></div>
+          <div class="field"><label>Contact Number</label><input id="cContact" value="${esc(q.customerSnap.contact)}"></div>
+          <div class="field"><label>Address</label><input id="cAddress" value="${esc(q.customerSnap.address)}"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="card-head"><h3>Project Information</h3></div>
+      <div class="card-body">
+        <div class="field"><label>Project Title</label><input id="pTitle" value="${esc(q.project.title)}" placeholder="e.g. 64ft 80-Pax Passenger Boat"></div>
+        <div class="grid g3">
+          <div class="field"><label>Reference No.</label><input id="pRef" value="${esc(q.refNo)}"></div>
+          <div class="field"><label>Date</label><input type="date" id="pDate" value="${q.date}"></div>
+          <div class="field"><label>Validity (days)</label><input type="number" id="pValid" value="${q.validityDays}"></div>
+        </div>
+        <div class="field"><label>Notes</label><textarea id="pNotes" rows="3">${esc(q.project.notes)}</textarea></div>
+      </div>
+    </div>
+  `;
+  document.getElementById('custPick').onchange = (e)=>{
+    const c = CUSTOMERS.find(x=>x.id===e.target.value);
+    if(c){ q.customerId=c.id; q.customerSnap={name:c.name,email:c.email,contact:c.contact,address:c.address}; persistQuote(q); renderEditor(document.getElementById('content'), document.getElementById('topbarActions')); }
+  };
+  bindText('cName', v=>q.customerSnap.name=v, q);
+  bindText('cEmail', v=>q.customerSnap.email=v, q);
+  bindText('cContact', v=>q.customerSnap.contact=v, q);
+  bindText('cAddress', v=>q.customerSnap.address=v, q);
+  bindText('pTitle', v=>q.project.title=v, q);
+  bindText('pRef', v=>q.refNo=v, q);
+  bindText('pDate', v=>q.date=v, q);
+  bindText('pValid', v=>q.validityDays=Number(v), q);
+  bindText('pNotes', v=>q.project.notes=v, q);
+}
+function bindText(id, setter, q){
+  const el = document.getElementById(id);
+  el.addEventListener('input', ()=>{ setter(el.value); persistQuote(q); if(document.getElementById('liveSummary')) updateLiveSummary(q); });
+}
+
+/* ---- Tab: Hull ---- */
+function tabHull(host, q){
+  const h = q.hull;
+  host.innerHTML = `
+    <div class="card">
+      <div class="card-head"><h3>Hull Particulars</h3></div>
+      <div class="card-body">
+        <div class="grid g4">
+          <div class="field"><label>Boat Type</label>
+            <select id="hType">${['Monohull','Catamaran','Passenger Boat','Fishing Boat','Patrol Boat','Pontoon'].map(o=>`<option ${h.boatType===o?'selected':''}>${o}</option>`).join('')}</select>
+          </div>
+          <div class="field"><label>Length Overall / LOA (ft)</label><input type="number" step="any" id="hLoa" value="${h.loa}"></div>
+          <div class="field"><label>Beam (ft)</label><input type="number" step="any" id="hBeam" value="${h.beam}"></div>
+          <div class="field"><label>Depth (ft)</label><input type="number" step="any" id="hDepth" value="${h.depth}"></div>
+        </div>
+        <div class="grid g3">
+          <div class="field"><label>Number of Hulls</label><input type="number" id="hHulls" value="${h.numHulls}"></div>
+          <div class="field"><label>Hull Area Override (sqm)</label><input type="number" step="any" id="hAreaOv" value="${h.hullAreaOverride??''}" placeholder="auto"><div class="hint">Leave blank to auto-estimate from LOA and Beam</div></div>
+          <div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="card-head"><h3>Laminate Schedule</h3></div>
+      <div class="card-body">
+        <div class="grid g3">
+          <div class="field"><label>Number of Layers</label><input type="number" id="hLayers" value="${h.layers}"></div>
+          <div class="field"><label>Glass Weight per Layer (kg/sqm)</label><input type="number" step="any" id="hGlassPerLayer" value="${h.glassPerLayer}"></div>
+          <div class="field"><label class="field-inline"><input type="checkbox" id="hCoreOn" ${h.coreEnabled?'checked':''} style="width:auto;"> Core Material</label>
+            <input type="number" step="any" id="hCoreArea" value="${h.coreArea}" placeholder="Core area (sqm)" ${h.coreEnabled?'':'disabled'}>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="card-head"><h3>Structural Components &amp; Core Materials</h3>
+        <div style="display:flex;gap:8px;">
+          <select id="structCatalogPick" style="padding:6px 8px;border:1px solid #d7d0bc;border-radius:3px;">
+            <option value="">+ Add from catalog…</option>
+            ${PRICING.structuralCatalog.map((a,i)=>`<option value="${i}">${esc(a.cat)} — ${esc(a.name)} (${esc(a.unit)})</option>`).join('')}
+          </select>
+          <button class="btn btn-sm" id="addBlankStruct">${icon('plus')} Custom Item</button>
+        </div>
+      </div>
+      <div class="card-body section-lead">Stiffeners, bulkheads, urethane foam, coring, and other structural materials — costed here and folded into Material Cost.</div>
+      <div class="card-body" style="padding:0;">
+        <table><thead><tr><th style="width:16%;">Category</th><th>Item / Description</th><th style="width:90px;">Unit</th><th style="width:70px;">Qty</th><th style="width:110px;">Unit Price</th><th class="right" style="width:110px;">Total</th><th></th></tr></thead>
+          <tbody id="structRows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="card-head"><h3>Hull Material Cost Breakdown</h3></div>
+      <div class="card-body" id="hullCalcOut"></div>
+    </div>
+  `;
+  const structBody = document.getElementById('structRows');
+  function drawStruct(){
+    const items = q.structural.items;
+    structBody.innerHTML = items.length ? items.map((a,idx)=>{
+      const total = (Number(a.qty)||0)*(Number(a.unitPrice)||0);
+      return `<tr>
+        <td><input class="tbl-input srow" data-idx="${idx}" data-f="cat" value="${esc(a.cat)}"></td>
+        <td><input class="tbl-input srow" data-idx="${idx}" data-f="name" value="${esc(a.name)}"></td>
+        <td><input class="tbl-input srow" data-idx="${idx}" data-f="unit" value="${esc(a.unit)}"></td>
+        <td><input class="tbl-input num srow" type="number" data-idx="${idx}" data-f="qty" value="${a.qty}"></td>
+        <td><input class="tbl-input num srow" type="number" data-idx="${idx}" data-f="unitPrice" value="${a.unitPrice}"></td>
+        <td class="right mono">${fmt(total)}</td>
+        <td class="right"><span class="btn btn-ghost btn-sm" data-delstruct="${idx}" style="color:var(--danger);">✕</span></td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="7"><div class="empty">No structural items yet. Add stiffeners, bulkheads, foam core, etc. from the catalog or as a custom line item.</div></td></tr>`;
+    structBody.querySelectorAll('.srow').forEach(inp=>{
+      inp.addEventListener('input', ()=>{
+        const a = q.structural.items[inp.dataset.idx];
+        a[inp.dataset.f] = ['qty','unitPrice'].includes(inp.dataset.f) ? Number(inp.value) : inp.value;
+        persistQuote(q); drawStruct(); drawHullCalc(); updateLiveSummary(q);
+      });
+    });
+    structBody.querySelectorAll('[data-delstruct]').forEach(b=>b.onclick=()=>{
+      q.structural.items.splice(Number(b.dataset.delstruct),1); persistQuote(q); drawStruct(); drawHullCalc(); updateLiveSummary(q);
+    });
+  }
+  document.getElementById('structCatalogPick').onchange = (e)=>{
+    if(e.target.value==='') return;
+    const item = PRICING.structuralCatalog[Number(e.target.value)];
+    q.structural.items.push({id:uid('si'), cat:item.cat, name:item.name, unit:item.unit, qty:1, unitPrice:item.unitPrice});
+    e.target.value=''; persistQuote(q); drawStruct(); drawHullCalc(); updateLiveSummary(q);
+  };
+  document.getElementById('addBlankStruct').onclick = ()=>{
+    q.structural.items.push({id:uid('si'), cat:'Other Structural Materials', name:'New Item', unit:'pc', qty:1, unitPrice:0});
+    persistQuote(q); drawStruct(); drawHullCalc(); updateLiveSummary(q);
+  };
+  drawStruct();
+  ['hType','hLoa','hBeam','hDepth','hHulls','hAreaOv','hLayers','hGlassPerLayer','hCoreArea'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', ()=>{
+      h.boatType = document.getElementById('hType').value;
+      h.loa = Number(document.getElementById('hLoa').value);
+      h.beam = Number(document.getElementById('hBeam').value);
+      h.depth = Number(document.getElementById('hDepth').value);
+      h.numHulls = Number(document.getElementById('hHulls').value)||1;
+      const ov = document.getElementById('hAreaOv').value;
+      h.hullAreaOverride = ov===''? null : Number(ov);
+      h.layers = Number(document.getElementById('hLayers').value);
+      h.glassPerLayer = Number(document.getElementById('hGlassPerLayer').value);
+      h.coreArea = Number(document.getElementById('hCoreArea').value);
+      persistQuote(q); drawHullCalc(); updateLiveSummary(q);
+    });
+  });
+  document.getElementById('hCoreOn').addEventListener('change', (e)=>{
+    h.coreEnabled = e.target.checked; document.getElementById('hCoreArea').disabled = !h.coreEnabled;
+    persistQuote(q); drawHullCalc(); updateLiveSummary(q);
+  });
+  function drawHullCalc(){
+    const c = computeHull(q);
+    const s = computeStructural(q);
+    document.getElementById('hullCalcOut').innerHTML = `
+      <table>
+        <tbody>
+          <tr><td>Estimated Hull Surface Area</td><td class="right mono">${fmtNum(c.area,2)} sqm</td></tr>
+          <tr><td>Fiberglass Weight Required</td><td class="right mono">${fmtNum(c.glassWeight,1)} kg</td></tr>
+          <tr><td>Resin Consumption</td><td class="right mono">${fmtNum(c.resinLiters,1)} L</td></tr>
+          <tr><td>Gelcoat Requirement</td><td class="right mono">${fmtNum(c.gelcoatWeight,1)} kg</td></tr>
+          <tr><td>Fiberglass Cost</td><td class="right mono">${fmt(c.glassCost)}</td></tr>
+          <tr><td>Resin Cost</td><td class="right mono">${fmt(c.resinCost)}</td></tr>
+          <tr><td>Gelcoat Cost</td><td class="right mono">${fmt(c.gelcoatCost)}</td></tr>
+          <tr><td>Core Material Cost</td><td class="right mono">${fmt(c.coreCost)}</td></tr>
+          <tr><td style="font-weight:700;">Laminate Cost Subtotal</td><td class="right mono" style="font-weight:700;">${fmt(c.total)}</td></tr>
+          <tr><td>Structural Components (stiffeners, bulkheads, foam, etc.)</td><td class="right mono">${fmt(s.total)}</td></tr>
+          <tr><td style="font-weight:700;">Hull &amp; Structural Material Cost Total</td><td class="right mono" style="font-weight:700;">${fmt(c.total + s.total)}</td></tr>
+        </tbody>
+      </table>`;
+  }
+  drawHullCalc();
+}
+
+/* ---- Tab: Paint ---- */
+function tabPaint(host, q){
+  const p = q.paint;
+  host.innerHTML = `
+    <div class="card">
+      <div class="card-head"><h3>Surface Finishing &amp; Painting</h3></div>
+      <div class="card-body">
+        <div class="grid g3">
+          <div class="field"><label>Paintable Area Override (sqm)</label><input type="number" step="any" id="pArea" value="${p.areaOverride??''}" placeholder="uses hull area"></div>
+          <div class="field"><label>Number of Coats</label><input type="number" id="pCoats" value="${p.coats}"></div>
+          <div class="field"><label>Paint Type</label><input id="pType" value="${esc(p.paintType)}"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="card-head"><h3>Paint Material Cost Breakdown</h3></div>
+      <div class="card-body" id="paintCalcOut"></div>
+    </div>
+  `;
+  ['pArea','pCoats','pType'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', ()=>{
+      const ov = document.getElementById('pArea').value;
+      p.areaOverride = ov===''? null : Number(ov);
+      p.coats = Number(document.getElementById('pCoats').value);
+      p.paintType = document.getElementById('pType').value;
+      persistQuote(q); drawPaintCalc(); updateLiveSummary(q);
+    });
+  });
+  function drawPaintCalc(){
+    const hull = computeHull(q); const c = computePaint(q, hull);
+    document.getElementById('paintCalcOut').innerHTML = `
+      <table><tbody>
+        <tr><td>Paintable Surface Area</td><td class="right mono">${fmtNum(c.area,2)} sqm</td></tr>
+        <tr><td>Primer Required</td><td class="right mono">${fmtNum(c.primerLiters,1)} L</td></tr>
+        <tr><td>Paint Required (${p.coats} coats)</td><td class="right mono">${fmtNum(c.paintLiters,1)} L</td></tr>
+        <tr><td>Primer Cost</td><td class="right mono">${fmt(c.primerCost)}</td></tr>
+        <tr><td>Paint Cost</td><td class="right mono">${fmt(c.paintCost)}</td></tr>
+        <tr><td style="font-weight:700;">Paint Material Cost Total</td><td class="right mono" style="font-weight:700;">${fmt(c.total)}</td></tr>
+      </tbody></table>
+      <div class="hint" style="margin-top:8px;">Painting labor hours are entered on the Labor tab.</div>`;
+  }
+  drawPaintCalc();
+}
+
+/* ---- Tab: Accessories ---- */
+function tabAccessories(host, q){
+  host.innerHTML = `
+    <div class="card">
+      <div class="card-head"><h3>Accessories &amp; Boat Components</h3>
+        <div style="display:flex;gap:8px;">
+          <select id="catalogPick" style="padding:6px 8px;border:1px solid #d7d0bc;border-radius:3px;">
+            <option value="">+ Add from catalog…</option>
+            ${PRICING.accessoryCatalog.map((a,i)=>`<option value="${i}">${esc(a.cat)} — ${esc(a.name)}</option>`).join('')}
+          </select>
+          <button class="btn btn-sm" id="addBlankItem">${icon('plus')} Custom Item</button>
+        </div>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <table><thead><tr><th style="width:16%;">Category</th><th>Item / Description</th><th style="width:70px;">Qty</th><th style="width:110px;">Unit Price</th><th style="width:70px;">Markup %</th><th class="right" style="width:110px;">Total</th><th></th></tr></thead>
+          <tbody id="accRows"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  const rowsBody = document.getElementById('accRows');
+  function draw(){
+    rowsBody.innerHTML = q.accessories.length ? q.accessories.map((a,idx)=>{
+      const total = (Number(a.qty)||0)*(Number(a.unitPrice)||0)*(1+(Number(a.markup)||0)/100);
+      return `<tr>
+        <td><input class="tbl-input arow" data-idx="${idx}" data-f="cat" value="${esc(a.cat)}"></td>
+        <td><input class="tbl-input arow" data-idx="${idx}" data-f="name" value="${esc(a.name)}"></td>
+        <td><input class="tbl-input num arow" type="number" data-idx="${idx}" data-f="qty" value="${a.qty}"></td>
+        <td><input class="tbl-input num arow" type="number" data-idx="${idx}" data-f="unitPrice" value="${a.unitPrice}"></td>
+        <td><input class="tbl-input num arow" type="number" data-idx="${idx}" data-f="markup" value="${a.markup}"></td>
+        <td class="right mono">${fmt(total)}</td>
+        <td class="right"><span class="btn btn-ghost btn-sm" data-delrow="${idx}" style="color:var(--danger);">✕</span></td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="7"><div class="empty">No accessory items yet. Add from the catalog or add a custom line item.</div></td></tr>`;
+    rowsBody.querySelectorAll('.arow').forEach(inp=>{
+      inp.addEventListener('input', ()=>{
+        const a = q.accessories[inp.dataset.idx];
+        a[inp.dataset.f] = ['qty','unitPrice','markup'].includes(inp.dataset.f) ? Number(inp.value) : inp.value;
+        persistQuote(q); draw(); updateLiveSummary(q);
+      });
+    });
+    rowsBody.querySelectorAll('[data-delrow]').forEach(b=>b.onclick=()=>{
+      q.accessories.splice(Number(b.dataset.delrow),1); persistQuote(q); draw(); updateLiveSummary(q);
+    });
+  }
+  document.getElementById('catalogPick').onchange = (e)=>{
+    if(e.target.value===''){ return; }
+    const item = PRICING.accessoryCatalog[Number(e.target.value)];
+    q.accessories.push({id:uid('ai'), cat:item.cat, name:item.name, qty:1, unitPrice:item.unitPrice, markup:15});
+    e.target.value=''; persistQuote(q); draw(); updateLiveSummary(q);
+  };
+  document.getElementById('addBlankItem').onclick = ()=>{
+    q.accessories.push({id:uid('ai'), cat:'Custom', name:'New Item', qty:1, unitPrice:0, markup:15});
+    persistQuote(q); draw(); updateLiveSummary(q);
+  };
+  draw();
+}
+
+/* ---- Tab: Engine ---- */
+function tabEngine(host, q){
+  const e = q.engine;
+  host.innerHTML = `
+    <div class="card">
+      <div class="card-head"><h3>Engine &amp; Mechanical System</h3></div>
+      <div class="card-body">
+        <div class="field"><label>Load from Engine Package Catalog</label>
+          <select id="engPick"><option value="">— Custom entry —</option>${PRICING.engineDb.map(p=>`<option value="${p.id}">${esc(p.name)} (₱${p.price.toLocaleString()})</option>`).join('')}</select>
+        </div>
+        <div class="grid g3">
+          <div class="field"><label>Engine Model / Description</label><input id="eModel" value="${esc(e.model)}"></div>
+          <div class="field"><label>Horsepower (HP)</label><input type="number" id="eHp" value="${e.hp}"></div>
+          <div class="field"><label>Number of Engines</label><input type="number" id="eQty" value="${e.qty}"></div>
+          <div class="field"><label>Unit Price (₱)</label><input type="number" id="ePrice" value="${e.unitPrice}"></div>
+          <div class="field"><label>Transmission</label><input id="eTrans" value="${esc(e.transmission)}"></div>
+          <div class="field"><label>Propeller</label><input id="eProp" value="${esc(e.propeller)}"></div>
+        </div>
+        <div class="field"><label>Installation Cost (₱)</label><input type="number" id="eInstall" value="${e.installation}"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="card-head"><h3>Engine Cost Summary</h3></div>
+      <div class="card-body" id="engineCalcOut"></div>
+    </div>
+  `;
+  document.getElementById('engPick').onchange = (ev)=>{
+    const pkg = PRICING.engineDb.find(x=>x.id===ev.target.value);
+    if(pkg){ e.model=pkg.name; e.hp=pkg.hp; e.unitPrice=pkg.price; persistQuote(q); tabEngine(host,q); updateLiveSummary(q); }
+  };
+  ['eModel','eHp','eQty','ePrice','eTrans','eProp','eInstall'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', ()=>{
+      e.model = document.getElementById('eModel').value;
+      e.hp = Number(document.getElementById('eHp').value);
+      e.qty = Number(document.getElementById('eQty').value);
+      e.unitPrice = Number(document.getElementById('ePrice').value);
+      e.transmission = document.getElementById('eTrans').value;
+      e.propeller = document.getElementById('eProp').value;
+      e.installation = Number(document.getElementById('eInstall').value);
+      persistQuote(q); drawEng(); updateLiveSummary(q);
+    });
+  });
+  function drawEng(){
+    const c = computeEngine(q);
+    document.getElementById('engineCalcOut').innerHTML = `
+      <table><tbody>
+        <tr><td>Engines (${e.qty} × ${fmt(e.unitPrice)})</td><td class="right mono">${fmt(c.unitsCost)}</td></tr>
+        <tr><td>Installation</td><td class="right mono">${fmt(e.installation)}</td></tr>
+        <tr><td style="font-weight:700;">Engine &amp; Mechanical Total</td><td class="right mono" style="font-weight:700;">${fmt(c.total)}</td></tr>
+      </tbody></table>`;
+  }
+  drawEng();
+}
+
+/* ---- Tab: Labor ---- */
+function tabLabor(host, q){
+  const l = q.labor, rates = q.rates.laborRates;
+  const labels = {fabrication:'Hull Fabrication', fiberglass:'Fiberglass Work', painting:'Painting', electrical:'Electrical Installation', assembly:'Assembly', testing:'Testing & Commissioning'};
+  host.innerHTML = `
+    <div class="card">
+      <div class="card-head"><h3>Labor &amp; Manufacturing Hours</h3></div>
+      <div class="card-body" style="padding:0;">
+        <table><thead><tr><th>Category</th><th style="width:120px;">Hours</th><th style="width:140px;">Rate (₱/hr)</th><th class="right" style="width:130px;">Cost</th></tr></thead>
+        <tbody id="laborRows"></tbody></table>
+      </div>
+    </div>
+  `;
+  function draw(){
+    const c = computeLabor(q);
+    document.getElementById('laborRows').innerHTML = c.rows.map(r=>`
+      <tr>
+        <td>${labels[r.key]}</td>
+        <td><input type="number" class="tbl-input num lrow" data-k="${r.key}" data-f="hours" value="${r.hours}"></td>
+        <td><input type="number" class="tbl-input num lrow" data-k="${r.key}" data-f="rate" value="${r.rate}"></td>
+        <td class="right mono">${fmt(r.cost)}</td>
+      </tr>`).join('') + `<tr><td colspan="3" style="font-weight:700;">Total Labor Cost</td><td class="right mono" style="font-weight:700;">${fmt(c.total)}</td></tr>`;
+    document.querySelectorAll('.lrow').forEach(inp=>{
+      inp.addEventListener('input', ()=>{
+        if(inp.dataset.f==='hours') l[inp.dataset.k] = Number(inp.value);
+        else rates[inp.dataset.k] = Number(inp.value);
+        persistQuote(q); draw(); updateLiveSummary(q);
+      });
+    });
+  }
+  draw();
+}
+
+/* ---- Tab: Overhead & Margin ---- */
+function tabPricing(host, q){
+  const r = q.rates;
+  const sch = q.schedule;
+  host.innerHTML = `
+    <div class="card">
+      <div class="card-head"><h3>Construction Timeline</h3></div>
+      <div class="card-body">
+        <div class="section-lead">Price scales with how long the build takes — every day of construction carries a facility/overhead cost, and delivery dates faster than the standard build time carry a rush surcharge.</div>
+        <div class="grid g3">
+          <div class="field"><label>Construction Start Date</label><input type="date" id="schStart" value="${sch.startDate}"></div>
+          <div class="field"><label>Standard Build Duration (days)</label><input type="number" id="schStandard" value="${sch.standardDays}"></div>
+          <div class="field"><label>Requested / Quoted Duration (days)</label><input type="number" id="schRequested" value="${sch.requestedDays}"></div>
+        </div>
+        <div class="field"><label>Daily Rate (₱/day)</label><input type="number" step="any" id="schDailyRate" value="${r.dailyRate}"><div class="hint">Facility, utilities, and standby crew cost accrued per calendar day of construction.</div></div>
+        <div class="field"><label>Rush Surcharge (%)</label><input type="number" step="any" id="schRushPct" value="${r.rushFeePct}"><div class="hint">Applied to base cost only if the requested duration is shorter than the standard build duration.</div></div>
+        <div id="timelineOut"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="card-head"><h3>Pricing Formula — This Quotation</h3></div>
+      <div class="card-body">
+        <div class="section-lead">These percentages are copied from the Pricing Database when the quotation is created and can be adjusted per-job without affecting other quotations.</div>
+        <div class="grid g3">
+          <div class="field"><label>Overhead (%)</label><input type="number" step="any" id="oPct" value="${r.overheadPct}"></div>
+          <div class="field"><label>Contingency (%)</label><input type="number" step="any" id="cPct" value="${r.contingencyPct}"></div>
+          <div class="field"><label>Profit Margin (%)</label><input type="number" step="any" id="mPct" value="${r.marginPct}"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="card-head"><h3>Full Pricing Formula</h3></div>
+      <div class="card-body" id="formulaOut"></div>
+    </div>
+  `;
+  ['schStart','schStandard','schRequested','schDailyRate','schRushPct'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', ()=>{
+      sch.startDate = document.getElementById('schStart').value;
+      sch.standardDays = Number(document.getElementById('schStandard').value);
+      sch.requestedDays = Number(document.getElementById('schRequested').value);
+      r.dailyRate = Number(document.getElementById('schDailyRate').value);
+      r.rushFeePct = Number(document.getElementById('schRushPct').value);
+      persistQuote(q); drawFormula(); updateLiveSummary(q);
+    });
+  });
+  ['oPct','cPct','mPct'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', ()=>{
+      r.overheadPct = Number(document.getElementById('oPct').value);
+      r.contingencyPct = Number(document.getElementById('cPct').value);
+      r.marginPct = Number(document.getElementById('mPct').value);
+      persistQuote(q); drawFormula(); updateLiveSummary(q);
+    });
+  });
+  function drawFormula(){
+    const c = computeAll(q);
+    document.getElementById('timelineOut').innerHTML = `
+      <table style="margin-top:6px;"><tbody>
+        <tr><td>Requested Duration</td><td class="right mono">${c.requestedDays} days</td></tr>
+        <tr><td>Estimated Delivery Date</td><td class="right mono">${c.deliveryDate? c.deliveryDate.toISOString().slice(0,10) : '—'}</td></tr>
+        <tr><td>${c.isRush? 'Rush Build (faster than standard)' : 'Standard Build Schedule'}</td><td class="right">${c.isRush? '⚡ Rush surcharge applies' : '✓ No surcharge'}</td></tr>
+      </tbody></table>`;
+    document.getElementById('formulaOut').innerHTML = `
+      <table><tbody>
+        <tr><td>Material Cost</td><td class="right mono">${fmt(c.materialCost)}</td></tr>
+        <tr><td>+ Labor Cost</td><td class="right mono">${fmt(c.laborCost)}</td></tr>
+        <tr><td>+ Equipment Cost</td><td class="right mono">${fmt(c.equipmentCost)}</td></tr>
+        <tr><td style="border-top:1px solid var(--paper-line);">= Base Cost</td><td class="right mono" style="border-top:1px solid var(--paper-line);">${fmt(c.base)}</td></tr>
+        <tr><td>+ Overhead (${r.overheadPct}%)</td><td class="right mono">${fmt(c.overheadCost)}</td></tr>
+        <tr><td>+ Contingency (${r.contingencyPct}%)</td><td class="right mono">${fmt(c.contingencyCost)}</td></tr>
+        <tr><td>+ Profit Margin (${r.marginPct}%)</td><td class="right mono">${fmt(c.marginCost)}</td></tr>
+        <tr><td>+ Construction Duration Cost (${c.requestedDays} days × ${fmt(r.dailyRate)}/day)</td><td class="right mono">${fmt(c.durationCost)}</td></tr>
+        <tr><td>+ Rush Surcharge ${c.isRush?`(${r.rushFeePct}%)`:'(not applicable)'}</td><td class="right mono">${fmt(c.rushFee)}</td></tr>
+        <tr class="grand"><td style="font-weight:700;">= Final Quotation Price</td><td class="right mono" style="font-weight:700;">${fmt(c.finalTotal)}</td></tr>
+      </tbody></table>`;
+  }
+  drawFormula();
+}
+
+/* ---- Tab: MARINA Documentation ---- */
+function tabMarina(host, q){
+  const m = q.marina;
+  host.innerHTML = `
+    <div class="card">
+      <div class="card-head"><h3>MARINA Documentation &amp; Regulatory Requirements</h3>
+        <button class="btn btn-sm" id="addMarinaItem">${icon('plus')} Add Requirement</button>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <table><thead><tr><th style="width:44%;">Requirement / Certificate</th><th style="width:130px;">Responsibility</th><th>Remarks</th><th></th></tr></thead>
+          <tbody id="marinaRows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="card-head"><h3>Notes for Quotation Output</h3></div>
+      <div class="card-body">
+        <div class="field"><textarea id="marinaNotes" rows="4">${esc(m.notes)}</textarea></div>
+        <div class="hint">This section prints on the quotation document as "MARINA Documentation &amp; Regulatory Requirements", right after the cost summary.</div>
+      </div>
+    </div>
+  `;
+  const rowsBody = document.getElementById('marinaRows');
+  function draw(){
+    rowsBody.innerHTML = m.items.length ? m.items.map((it,idx)=>`
+      <tr>
+        <td><input class="tbl-input mrow" data-idx="${idx}" data-f="name" value="${esc(it.name)}"></td>
+        <td><select class="tbl-input mrow" data-idx="${idx}" data-f="responsibility">
+          <option ${it.responsibility==='Customer'?'selected':''}>Customer</option>
+          <option ${it.responsibility==='Company'?'selected':''}>Company</option>
+        </select></td>
+        <td><input class="tbl-input mrow" data-idx="${idx}" data-f="remarks" value="${esc(it.remarks)}"></td>
+        <td class="right"><span class="btn btn-ghost btn-sm" data-delm="${idx}" style="color:var(--danger);">✕</span></td>
+      </tr>`).join('') : `<tr><td colspan="4"><div class="empty">No MARINA requirements listed yet.</div></td></tr>`;
+    rowsBody.querySelectorAll('.mrow').forEach(inp=>{
+      inp.addEventListener('input', ()=>{
+        m.items[inp.dataset.idx][inp.dataset.f] = inp.value; persistQuote(q);
+      });
+    });
+    rowsBody.querySelectorAll('[data-delm]').forEach(b=>b.onclick=()=>{
+      m.items.splice(Number(b.dataset.delm),1); persistQuote(q); draw();
+    });
+  }
+  document.getElementById('addMarinaItem').onclick = ()=>{
+    m.items.push({name:'New Requirement', responsibility:'Customer', remarks:''});
+    persistQuote(q); draw();
+  };
+  document.getElementById('marinaNotes').addEventListener('input', (e)=>{ m.notes = e.target.value; persistQuote(q); });
+  draw();
+}
+
+/* ---- Tab: Terms & Conditions ---- */
+function tabTerms(host, q){
+  host.innerHTML = `
+    <div class="card">
+      <div class="card-head"><h3>Terms &amp; Conditions</h3>
+        <button class="btn btn-sm" id="addTerm">${icon('plus')} Add Clause</button>
+      </div>
+      <div class="card-body section-lead">
+        Add, remove, reorder, or rewrite any clause. These print in order on the quotation, numbered automatically, followed by an auto-generated Validity clause based on the Validity (days) field set on the Client &amp; Project tab.
+      </div>
+      <div class="card-body" style="padding-top:0;" id="termRows"></div>
+    </div>
+  `;
+  const wrap = document.getElementById('termRows');
+  function draw(){
+    wrap.innerHTML = q.terms.length ? q.terms.map((t,idx)=>`
+      <div class="card" style="margin-bottom:10px;box-shadow:none;border:1px solid var(--paper-line);">
+        <div class="card-body" style="padding:12px 14px;">
+          <div class="grid" style="grid-template-columns:1fr auto;gap:10px;align-items:start;">
+            <div class="field" style="margin-bottom:8px;"><label>Clause ${idx+1} Title</label><input class="term-f" data-idx="${idx}" data-f="title" value="${esc(t.title)}"></div>
+            <div style="display:flex;gap:4px;padding-top:20px;">
+              <button class="btn btn-ghost btn-sm" data-up="${idx}" ${idx===0?'disabled':''} title="Move up">↑</button>
+              <button class="btn btn-ghost btn-sm" data-down="${idx}" ${idx===q.terms.length-1?'disabled':''} title="Move down">↓</button>
+              <button class="btn btn-ghost btn-sm" data-del="${idx}" style="color:var(--danger);" title="Remove">✕</button>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:0;"><label>Clause Text</label><textarea class="term-f" data-idx="${idx}" data-f="body" rows="2">${esc(t.body)}</textarea></div>
+        </div>
+      </div>
+    `).join('') : `<div class="empty">No clauses yet. Add one to start building your terms &amp; conditions.</div>`;
+    wrap.querySelectorAll('.term-f').forEach(el=>{
+      el.addEventListener('input', ()=>{
+        q.terms[el.dataset.idx][el.dataset.f] = el.value; persistQuote(q);
+      });
+    });
+    wrap.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{
+      const i = Number(b.dataset.up); [q.terms[i-1], q.terms[i]] = [q.terms[i], q.terms[i-1]]; persistQuote(q); draw();
+    });
+    wrap.querySelectorAll('[data-down]').forEach(b=>b.onclick=()=>{
+      const i = Number(b.dataset.down); [q.terms[i+1], q.terms[i]] = [q.terms[i], q.terms[i+1]]; persistQuote(q); draw();
+    });
+    wrap.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+      q.terms.splice(Number(b.dataset.del),1); persistQuote(q); draw();
+    });
+  }
+  document.getElementById('addTerm').onclick = ()=>{
+    q.terms.push({title:'New Clause', body:''}); persistQuote(q); draw();
+  };
+  draw();
+}
+
+/* ---- Tab: Output (printable quotation) ---- */
+function tabOutput(host, q){
+  const c = computeAll(q);
+  const validUntil = new Date(new Date(q.date).getTime() + q.validityDays*86400000);
+  host.innerHTML = `
+    <div class="no-print" style="margin-bottom:14px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+      <button class="btn btn-primary" id="btnPrint">🖨 Print / Export as PDF</button>
+      <span class="hint">Uses your browser's print dialog — choose "Save as PDF" as the destination.</span>
+      <label class="field-inline" style="font-size:11.5px;color:var(--ink-soft);">
+        <input type="checkbox" id="toggleInternal" ${q.output.showInternalCosts?'checked':''} style="width:auto;">
+        Include internal cost breakdown (labor, overhead, contingency, margin) in printed output
+      </label>
+    </div>
+    <div class="doc-wrap">
+      <div class="doc">
+        <div class="doc-header">
+          <div class="co">
+            <h2>${esc(COMPANY.name)}</h2>
+            <div class="tag">${esc(COMPANY.tagline)}</div>
+            <div class="tag">${esc(COMPANY.email)}</div>
+          </div>
+          <div class="meta">
+            <div>QUOTATION</div>
+            <div class="ref">Ref. No. ${esc(q.refNo)}</div>
+            <div>Date: ${q.date}</div>
+            <div>Valid until: ${validUntil.toISOString().slice(0,10)}</div>
+          </div>
+        </div>
+
+        <div class="grid g2">
+          <div>
+            <strong>Client:</strong> ${esc(q.customerSnap.name)||'—'}<br>
+            <strong>Address:</strong> ${esc(q.customerSnap.address)||'—'}<br>
+            <strong>Email:</strong> ${esc(q.customerSnap.email)||'—'}<br>
+            <strong>Contact:</strong> ${esc(q.customerSnap.contact)||'—'}
+          </div>
+          <div>
+            <strong>Project:</strong> ${esc(q.project.title)||'—'}<br>
+            <strong>Boat Type:</strong> ${esc(q.hull.boatType)}<br>
+            <strong>Status:</strong> ${q.status}
+          </div>
+        </div>
+
+        <div class="doc-section-title">I. Boat Specifications</div>
+        <table>
+          <tbody>
+            <tr><td>Length Overall</td><td class="right">${q.hull.loa} ft</td><td>Beam</td><td class="right">${q.hull.beam} ft</td></tr>
+            <tr><td>Depth</td><td class="right">${q.hull.depth} ft</td><td>Number of Hulls</td><td class="right">${q.hull.numHulls}</td></tr>
+            <tr><td>Estimated Hull Area</td><td class="right">${fmtNum(c.hull.area,1)} sqm</td><td>Laminate Schedule</td><td class="right">${q.hull.layers} layers</td></tr>
+            <tr><td>Paint Type</td><td class="right" colspan="3">${esc(q.paint.paintType)}</td></tr>
+          </tbody>
+        </table>
+
+        <div class="doc-section-title">II. Construction Timeline</div>
+        <table><tbody>
+          <tr><td>Construction Start Date</td><td class="right">${q.schedule.startDate||'—'}</td><td>Requested Duration</td><td class="right">${c.requestedDays} days</td></tr>
+          <tr><td>Estimated Delivery Date</td><td class="right" colspan="3">${c.deliveryDate? c.deliveryDate.toISOString().slice(0,10) : '—'}${c.isRush? ' (Rush Build)' : ''}</td></tr>
+        </tbody></table>
+
+        <div class="doc-section-title">III. Engine &amp; Mechanical System</div>
+        <table><tbody>
+          <tr><td>${esc(q.engine.model)||'—'}</td><td class="right">${q.engine.hp} HP × ${q.engine.qty} unit(s)</td></tr>
+          <tr><td>Transmission: ${esc(q.engine.transmission)||'—'} &nbsp; Propeller: ${esc(q.engine.propeller)||'—'}</td><td class="right mono">${fmt(c.eng.total)}</td></tr>
+        </tbody></table>
+
+        <div class="doc-section-title">IV. Structural Components &amp; Core Materials</div>
+        <table>
+          <thead><tr><th>Category</th><th>Item</th><th>Unit</th><th class="right">Qty</th><th class="right">Amount</th></tr></thead>
+          <tbody>
+            ${c.structural.rows.length? c.structural.rows.map(r=>`<tr><td>${esc(r.cat)}</td><td>${esc(r.name)}</td><td>${esc(r.unit)}</td><td class="right">${r.qty}</td><td class="right mono">${fmt(r.total)}</td></tr>`).join('') : `<tr><td colspan="5">No structural items listed.</td></tr>`}
+          </tbody>
+        </table>
+
+        <div class="doc-section-title">V. Accessories &amp; Components</div>
+        <table>
+          <thead><tr><th>Category</th><th>Item</th><th class="right">Qty</th><th class="right">Amount</th></tr></thead>
+          <tbody>
+            ${c.acc.rows.length? c.acc.rows.map(r=>`<tr><td>${esc(r.cat)}</td><td>${esc(r.name)}</td><td class="right">${r.qty}</td><td class="right mono">${fmt(r.total)}</td></tr>`).join('') : `<tr><td colspan="4">No accessory items listed.</td></tr>`}
+          </tbody>
+        </table>
+
+        <div class="doc-section-title">VI. Cost Summary</div>
+        <table>
+          <tbody>
+            <tr><td>Hull Material Cost (fiberglass, resin, gelcoat, core)</td><td class="right mono">${fmt(c.hull.total)}</td></tr>
+            <tr><td>Structural Components &amp; Core Materials</td><td class="right mono">${fmt(c.structural.total)}</td></tr>
+            <tr><td>Paint &amp; Finishing Material Cost</td><td class="right mono">${fmt(c.paint.total)}</td></tr>
+            <tr><td>Accessories &amp; Components</td><td class="right mono">${fmt(c.acc.total)}</td></tr>
+            <tr><td>Engine &amp; Mechanical System</td><td class="right mono">${fmt(c.eng.total)}</td></tr>
+            ${q.output.showInternalCosts ? `
+            <tr><td>Labor &amp; Manufacturing</td><td class="right mono">${fmt(c.laborCost)}</td></tr>
+            <tr><td>Overhead (${q.rates.overheadPct}%)</td><td class="right mono">${fmt(c.overheadCost)}</td></tr>
+            <tr><td>Contingency (${q.rates.contingencyPct}%)</td><td class="right mono">${fmt(c.contingencyCost)}</td></tr>
+            <tr><td>Profit Margin (${q.rates.marginPct}%)</td><td class="right mono">${fmt(c.marginCost)}</td></tr>
+            <tr><td>Construction Duration Cost (${c.requestedDays} days)</td><td class="right mono">${fmt(c.durationCost)}</td></tr>
+            <tr><td>Rush Surcharge${c.isRush?'':' (not applicable)'}</td><td class="right mono">${fmt(c.rushFee)}</td></tr>
+            ` : ``}
+            <tr class="grand"><td>TOTAL QUOTATION PRICE</td><td class="right mono">${fmt(c.finalTotal)}</td></tr>
+          </tbody>
+        </table>
+
+        <div class="doc-section-title">VII. MARINA Documentation &amp; Regulatory Requirements</div>
+        <table>
+          <thead><tr><th>Requirement / Certificate</th><th>Responsibility</th><th>Remarks</th></tr></thead>
+          <tbody>
+            ${q.marina.items.length ? q.marina.items.map(it=>`<tr><td>${esc(it.name)}</td><td>${esc(it.responsibility)}</td><td>${esc(it.remarks)}</td></tr>`).join('') : `<tr><td colspan="3">No MARINA requirements listed.</td></tr>`}
+          </tbody>
+        </table>
+        <div class="doc-terms" style="margin-top:6px;">${esc(q.marina.notes)}</div>
+
+        <div class="doc-section-title">VIII. Terms &amp; Conditions</div>
+        <div class="doc-terms">
+          <ol>
+            ${q.terms.map(t=>`<li>${t.title?`<strong>${esc(t.title)}:</strong> `:''}${esc(t.body)}</li>`).join('')}
+            <li><strong>Validity:</strong> This quotation is valid for ${q.validityDays} calendar days from date of issuance.</li>
+          </ol>
+        </div>
+
+        <div class="doc-sign">
+          <div><div class="ln">Prepared By</div></div>
+          <div><div class="ln">Approved By</div></div>
+          <div><div class="ln">Conforme — Customer</div></div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('btnPrint').onclick = ()=>window.print();
+  document.getElementById('toggleInternal').onchange = (e)=>{
+    q.output.showInternalCosts = e.target.checked; persistQuote(q);
+    tabOutput(host, q);
+  };
+}
+
+/* ============================================================
+   SAMPLE QUOTATIONS (seeded once, on first run only)
+   ============================================================ */
+function sampleAccessory(cat, name, qty, unitPrice, markup){
+  return { id:uid('ai'), cat, name, qty, unitPrice, markup };
+}
+function sampleStruct(cat, name, unit, qty, unitPrice){
+  return { id:uid('si'), cat, name, unit, qty, unitPrice };
+}
+function buildSampleQuotes(){
+  const built = [];
+
+  // 1) 64' Passenger Boat — 80 Pax, dual inboard diesel (monohull)
+  let s1 = blankQuote();
+  s1.status = 'approved';
+  s1.date = '2026-05-16';
+  s1.customerSnap = { name:'Isla Ferries Corp.', email:'operations@islaferries.example', contact:'0917-201-4488', address:'Iloilo City, Philippines' };
+  s1.project = { title:"64' Passenger Boat — 80 Pax (Dual Inboard)", notes:'SOLAS-compliant interisland passenger ferry, dual inboard diesel with enclosed head.' };
+  s1.hull = { boatType:'Passenger Boat', loa:64, beam:14, depth:6, numHulls:1, hullAreaOverride:null, layers:3, glassPerLayer:0.6, coreArea:0, coreEnabled:false };
+  s1.paint = { areaOverride:null, coats:3, paintType:'Marine Polyurethane Topcoat' };
+  s1.accessories = [
+    sampleAccessory('Hull & Deck Accessories','Stainless Bollard',2,8500,15),
+    sampleAccessory('Hull & Deck Accessories','Stainless Cleat',6,1800,15),
+    sampleAccessory('Hull & Deck Accessories','Towing Bitt',2,6200,15),
+    sampleAccessory('Electrical System','Dome Light',16,950,15),
+    sampleAccessory('Electrical System','Bilge Pump w/ Auto Float',2,4200,15),
+    sampleAccessory('Navigational Equipment','GPS Chartplotter 10in',1,95000,10),
+    sampleAccessory('Navigational Equipment','Marine Radar 36NM',1,185000,10),
+    sampleAccessory('Anchor & Docking','Anchor Set w/ Chain & Rope',1,22000,15),
+    sampleAccessory('SOLAS Safety Equipment','Life Vest',84,850,15),
+    sampleAccessory('SOLAS Safety Equipment','Fire Extinguisher',4,1850,15),
+  ];
+  s1.engine = { model:'Isuzu 340HP UM6SD1TCX + Dong-I DMT140H', hp:340, qty:2, unitPrice:3048856, installation:180000, transmission:'Dong-I DMT140H', propeller:'4-blade bronze' };
+  s1.structural = { items: [
+    sampleStruct('Stiffeners & Framing','Longitudinal Stiffener (glassed-in)','linear m',36,1450),
+    sampleStruct('Stiffeners & Framing','Transverse Frame / Stringer','linear m',24,1650),
+    sampleStruct('Bulkheads','Collision / Watertight Bulkhead','sqm',6,5200),
+    sampleStruct('Bulkheads','Plywood Bulkhead (marine ply, glassed both sides)','sqm',10,3800),
+    sampleStruct('Foam & Core Materials','Urethane Pour Foam (flotation/buoyancy)','cu.ft',40,850),
+  ] };
+  s1.labor = { fabrication:900, fiberglass:600, painting:260, electrical:320, assembly:400, testing:120 };
+  s1.schedule = { startDate:'2026-05-16', standardDays:240, requestedDays:240 };
+  built.push(s1); QUOTES.push(s1);
+
+  // 2) 38' Catamaran Tourist / Dive Boat — twin hull
+  let s2 = blankQuote();
+  s2.status = 'sent';
+  s2.date = '2026-06-02';
+  s2.customerSnap = { name:'Coral Bay Dive Charters', email:'bookings@coralbaydive.example', contact:'0918-330-5521', address:'Puerto Galera, Oriental Mindoro' };
+  s2.project = { title:"38' Catamaran Tourist / Dive Boat", notes:'Twin-hull catamaran, shaded deck, dive gear racks, twin outboard-ready transom (quoted with inboard option).' };
+  s2.hull = { boatType:'Catamaran', loa:38, beam:16, depth:5, numHulls:2, hullAreaOverride:null, layers:3, glassPerLayer:0.5, coreArea:22, coreEnabled:true };
+  s2.paint = { areaOverride:null, coats:3, paintType:'Marine Polyurethane Topcoat, high-gloss white with dive-charter livery' };
+  s2.accessories = [
+    sampleAccessory('Hull & Deck Accessories','Stainless Bollard',2,8500,15),
+    sampleAccessory('Hull & Deck Accessories','Stainless Cleat',4,1800,15),
+    sampleAccessory('Hull & Deck Accessories','Rub Rail (per ft)',76,420,15),
+    sampleAccessory('Electrical System','12V Panel Switch Board',1,14500,15),
+    sampleAccessory('Electrical System','Dome Light',10,950,15),
+    sampleAccessory('Electrical System','Battery (Marine Deep Cycle)',2,9800,15),
+    sampleAccessory('Navigational Equipment','GPS Chartplotter 10in',1,95000,10),
+    sampleAccessory('Anchor & Docking','Anchor Set w/ Chain & Rope',1,18000,15),
+    sampleAccessory('Anchor & Docking','Fender',6,1600,15),
+    sampleAccessory('SOLAS Safety Equipment','Life Vest',24,850,15),
+    sampleAccessory('SOLAS Safety Equipment','Ring Buoy',2,2400,15),
+    sampleAccessory('Custom','Dive Tank Rack (Stainless, 12-tank)',2,15500,15),
+  ];
+  s2.engine = { model:'Yanmar 6LY440 (twin, per-hull)', hp:440, qty:2, unitPrice:3650000, installation:150000, transmission:'ZF Marine transmission', propeller:'4-blade bronze, per hull' };
+  s2.structural = { items: [
+    sampleStruct('Stiffeners & Framing','Hat-Section Stringer (foam-cored)','linear m',30,1950),
+    sampleStruct('Bulkheads','FRP Sandwich Bulkhead (foam core)','sqm',8,4600),
+    sampleStruct('Foam & Core Materials','PVC Foam Core Board (Divinycell-type)','sqm',22,2600),
+    sampleStruct('Other Structural Materials','Deck Beam / Carlin (FRP)','linear m',14,1800),
+  ] };
+  s2.labor = { fabrication:620, fiberglass:520, painting:190, electrical:180, assembly:260, testing:90 };
+  s2.schedule = { startDate:'2026-06-02', standardDays:150, requestedDays:120 };
+  built.push(s2); QUOTES.push(s2);
+
+  // 3) 42' Fishing Boat — commercial monohull
+  let s3 = blankQuote();
+  s3.status = 'sent';
+  s3.date = '2026-06-10';
+  s3.customerSnap = { name:'Bantayan Fishing Cooperative', email:'coop@bantayanfish.example', contact:'0920-115-7742', address:'Bantayan Island, Cebu' };
+  s3.project = { title:"42' Commercial Fishing Boat", notes:'Fish hold with insulated ice box, outrigger-ready, deck winch mounting points.' };
+  s3.hull = { boatType:'Fishing Boat', loa:42, beam:11, depth:5.5, numHulls:1, hullAreaOverride:null, layers:3, glassPerLayer:0.6, coreArea:0, coreEnabled:false };
+  s3.paint = { areaOverride:null, coats:2, paintType:'Marine Antifouling Bottom Paint + Topside Enamel' };
+  s3.accessories = [
+    sampleAccessory('Hull & Deck Accessories','Stainless Bollard',2,8500,15),
+    sampleAccessory('Hull & Deck Accessories','Stainless Cleat',4,1800,15),
+    sampleAccessory('Hull & Deck Accessories','Towing Bitt',1,6200,15),
+    sampleAccessory('Electrical System','Dome Light',6,950,15),
+    sampleAccessory('Electrical System','Bilge Pump w/ Auto Float',1,4200,15),
+    sampleAccessory('Anchor & Docking','Anchor Set w/ Chain & Rope',1,20000,15),
+    sampleAccessory('Anchor & Docking','Fender',4,1600,15),
+    sampleAccessory('SOLAS Safety Equipment','Life Vest',12,850,15),
+    sampleAccessory('SOLAS Safety Equipment','Fire Extinguisher',2,1850,15),
+    sampleAccessory('Custom','Insulated Fish Hold w/ Hatch (600L)',1,48000,15),
+    sampleAccessory('Custom','Deck Winch Mounting Plate (SS)',2,7200,15),
+  ];
+  s3.engine = { model:'Isuzu 4JB1T (120HP)', hp:120, qty:1, unitPrice:980000, installation:60000, transmission:'Marine reduction gear 2.5:1', propeller:'3-blade bronze' };
+  s3.structural = { items: [
+    sampleStruct('Stiffeners & Framing','Transverse Frame / Stringer','linear m',18,1650),
+    sampleStruct('Bulkheads','Plywood Bulkhead (marine ply, glassed both sides)','sqm',5,3800),
+    sampleStruct('Foam & Core Materials','Urethane Pour Foam (flotation/buoyancy)','cu.ft',20,850),
+  ] };
+  s3.labor = { fabrication:480, fiberglass:340, painting:140, electrical:90, assembly:180, testing:60 };
+  s3.schedule = { startDate:'2026-06-10', standardDays:150, requestedDays:150 };
+  built.push(s3); QUOTES.push(s3);
+
+  // 4) 30' Patrol / Rescue Boat — monohull, high speed
+  let s4 = blankQuote();
+  s4.status = 'approved';
+  s4.date = '2026-06-18';
+  s4.customerSnap = { name:'Municipal Disaster Risk Reduction Office', email:'mdrrmo@lgu.example.gov.ph', contact:'0919-442-0093', address:'Roxas City, Capiz' };
+  s4.project = { title:"30' Patrol / Rescue Boat", notes:'High-speed monohull for coastal patrol and swift water rescue operations.' };
+  s4.hull = { boatType:'Patrol Boat', loa:30, beam:9, depth:4.5, numHulls:1, hullAreaOverride:null, layers:4, glassPerLayer:0.55, coreArea:0, coreEnabled:false };
+  s4.paint = { areaOverride:null, coats:3, paintType:'Marine Polyurethane Topcoat, high-visibility orange/white livery' };
+  s4.accessories = [
+    sampleAccessory('Hull & Deck Accessories','Stainless Bollard',2,8500,15),
+    sampleAccessory('Hull & Deck Accessories','Stainless Cleat',4,1800,15),
+    sampleAccessory('Hull & Deck Accessories','SS#316 Grab Handle',6,2600,15),
+    sampleAccessory('Electrical System','12V Panel Switch Board',1,14500,15),
+    sampleAccessory('Electrical System','Dome Light',8,950,15),
+    sampleAccessory('Electrical System','Battery (Marine Deep Cycle)',2,9800,15),
+    sampleAccessory('Navigational Equipment','GPS Chartplotter 10in',1,95000,10),
+    sampleAccessory('SOLAS Safety Equipment','Life Vest',10,850,15),
+    sampleAccessory('SOLAS Safety Equipment','Ring Buoy',4,2400,15),
+    sampleAccessory('Custom','Rescue Boarding Ladder (Stainless)',1,22000,15),
+    sampleAccessory('Custom','Emergency Siren & Beacon Light Bar',1,38000,15),
+  ];
+  s4.engine = { model:'Twin Yamaha 200HP Outboard (quoted as inboard-equivalent package)', hp:200, qty:2, unitPrice:1150000, installation:95000, transmission:'Direct drive', propeller:'Stainless 3-blade' };
+  s4.structural = { items: [
+    sampleStruct('Stiffeners & Framing','Longitudinal Stiffener (glassed-in)','linear m',16,1450),
+    sampleStruct('Foam & Core Materials','PVC Foam Core Board (Divinycell-type)','sqm',12,2600),
+    sampleStruct('Foam & Core Materials','Urethane Pour Foam (flotation/buoyancy)','cu.ft',15,850),
+  ] };
+  s4.labor = { fabrication:360, fiberglass:280, painting:130, electrical:150, assembly:190, testing:70 };
+  s4.schedule = { startDate:'2026-06-18', standardDays:100, requestedDays:100 };
+  built.push(s4); QUOTES.push(s4);
+
+  // 5) 50' Passenger Ferry — monohull
+  let s5 = blankQuote();
+  s5.status = 'sent';
+  s5.date = '2026-06-25';
+  s5.customerSnap = { name:'Tri-Island Shipping Lines', email:'fleet@triisland.example', contact:'0917-660-2214', address:'Cagayan de Oro City' };
+  s5.project = { title:"50' Passenger Ferry — 50 Pax (Single Inboard)", notes:'Short-route interisland ferry with covered passenger cabin and open aft deck.' };
+  s5.hull = { boatType:'Passenger Boat', loa:50, beam:12, depth:5.5, numHulls:1, hullAreaOverride:null, layers:3, glassPerLayer:0.6, coreArea:0, coreEnabled:false };
+  s5.paint = { areaOverride:null, coats:3, paintType:'Marine Polyurethane Topcoat' };
+  s5.accessories = [
+    sampleAccessory('Hull & Deck Accessories','Stainless Bollard',2,8500,15),
+    sampleAccessory('Hull & Deck Accessories','Stainless Cleat',6,1800,15),
+    sampleAccessory('Hull & Deck Accessories','Towing Bitt',2,6200,15),
+    sampleAccessory('Electrical System','Dome Light',12,950,15),
+    sampleAccessory('Electrical System','Bilge Pump w/ Auto Float',1,4200,15),
+    sampleAccessory('Navigational Equipment','GPS Chartplotter 10in',1,95000,10),
+    sampleAccessory('Anchor & Docking','Anchor Set w/ Chain & Rope',1,20000,15),
+    sampleAccessory('Anchor & Docking','Fender',4,1600,15),
+    sampleAccessory('SOLAS Safety Equipment','Life Vest',55,850,15),
+    sampleAccessory('SOLAS Safety Equipment','Fire Extinguisher',3,1850,15),
+  ];
+  s5.engine = { model:'Cummins QSB6.7 (450HP)', hp:450, qty:1, unitPrice:3820000, installation:140000, transmission:'ZF marine gearbox', propeller:'4-blade bronze' };
+  s5.structural = { items: [
+    sampleStruct('Stiffeners & Framing','Longitudinal Stiffener (glassed-in)','linear m',28,1450),
+    sampleStruct('Bulkheads','Plywood Bulkhead (marine ply, glassed both sides)','sqm',8,3800),
+    sampleStruct('Foam & Core Materials','Urethane Pour Foam (flotation/buoyancy)','cu.ft',30,850),
+  ] };
+  s5.labor = { fabrication:700, fiberglass:480, painting:210, electrical:230, assembly:300, testing:100 };
+  s5.schedule = { startDate:'2026-06-25', standardDays:200, requestedDays:200 };
+  built.push(s5); QUOTES.push(s5);
+
+  built.forEach(ensureQuoteDefaults);
+  save(DB_KEYS.quotes, QUOTES);
+}
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+QUOTES.forEach(ensureQuoteDefaults);
+save(DB_KEYS.quotes, QUOTES);
+if(!localStorage.getItem('frp_sample_seeded_v1') && QUOTES.length === 0){
+  buildSampleQuotes();
+  localStorage.setItem('frp_sample_seeded_v1', '1');
+}
+renderAll();
+</script>
+</body>
+</html>
